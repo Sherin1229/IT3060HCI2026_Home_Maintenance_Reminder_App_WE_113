@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1032824326223",
+    "project_id": "homiq-44256",
+    "storage_bucket": "homiq-44256.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1032824326223:android:fe6c5219751fb42261423a",
+        "android_client_info": {
+          "package_name": "com.example.homiq"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDXTm25AAGuVUGOiX4zsHZDHG3uPb1TLm0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
