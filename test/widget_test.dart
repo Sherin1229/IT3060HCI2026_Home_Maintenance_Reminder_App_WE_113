@@ -9,8 +9,8 @@ void main() {
     await tester.pumpAndSettle();
 
     // Verify that login screen contents are displayed.
-    expect(find.text('Welcome to HomiQ'), findsOneWidget);
-    expect(find.text('Login (Go to Dashboard)'), findsOneWidget);
-    expect(find.text('Create an Account'), findsOneWidget);
+    expect(find.text('Welcome Back!'), findsOneWidget);
+    expect(find.text('Login'), findsOneWidget);
+    expect(find.text('Sign Up'), findsOneWidget);
   });
 }
