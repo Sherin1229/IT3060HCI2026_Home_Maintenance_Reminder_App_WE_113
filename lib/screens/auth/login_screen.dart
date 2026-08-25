@@ -143,9 +143,7 @@ class _LoginScreenState extends State<LoginScreen> {
               // Login Button
               PrimaryButton(
                 text: 'Login',
-                onPressed: () {
-                  // UI only: Login logic disabled for now
-                },
+                onPressed: () => context.go('/dashboard'),
               ),
               const SizedBox(height: 32),
 
@@ -167,37 +165,20 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Social Buttons Row
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        // TODO: Implement Google Sign-In
-                      },
-                      icon: const Icon(Icons.g_mobiledata, color: AppColors.textPrimary), // Placeholder for Google icon
-                      label: const Text('Google', style: TextStyle(color: AppColors.textPrimary)),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.border),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                    ),
+              // Social Button
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    // UI only: Google Sign-In logic disabled for now
+                  },
+                  icon: Image.asset('assets/logos/google_logo.png', height: 24, width: 24),
+                  label: const Text('Continue with Google', style: TextStyle(color: AppColors.textPrimary)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.border),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {
-                        // TODO: Implement Apple Sign-In
-                      },
-                      icon: const Icon(Icons.apple, color: AppColors.textPrimary), // Apple icon
-                      label: const Text('Apple', style: TextStyle(color: AppColors.textPrimary)),
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.border),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
               const SizedBox(height: 32),
 

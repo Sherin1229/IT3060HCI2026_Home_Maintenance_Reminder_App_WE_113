@@ -65,6 +65,7 @@ flutter:
 
   assets:
     - assets/logos/
+    - assets/logos/google_logo.png
     - assets/icons/
     - assets/images/
 
