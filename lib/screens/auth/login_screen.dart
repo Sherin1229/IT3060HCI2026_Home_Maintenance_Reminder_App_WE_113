@@ -5,6 +5,8 @@ import '../../utils/constants.dart';
 import '../../widgets/app_logo.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/primary_button.dart';
+import 'package:provider/provider.dart';
+import '../../providers/auth_provider.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,12 +16,58 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   bool _isObscure = true;
   bool _rememberMe = false;
 
   @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter your email and password.'),
+        ),
+      );
+      return;
+    }
+
+    final authProvider = context.read<AuthProvider>();
+
+    final success = await authProvider.login(
+      email: email,
+      password: password,
+    );
+
+    if (!mounted) return;
+
+    if (success) {
+      context.go('/dashboard');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            authProvider.errorMessage ??
+                'Login failed. Please try again.',
+          ),
+        ),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final authProvider = context.watch<AuthProvider>();
 
     return Scaffold(
       backgroundColor: AppColors.surface, // Use white/light background as requested
@@ -60,6 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // Email Field
               CustomTextField(
+                controller: _emailController,
                 label: 'Email address',
                 prefixIcon: Icons.email_outlined,
                 keyboardType: TextInputType.emailAddress,
@@ -69,6 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
               // Password Field
               CustomTextField(
+                controller: _passwordController,
                 label: 'Password',
                 prefixIcon: Icons.lock_outline,
                 isObscure: _isObscure,
@@ -143,7 +193,8 @@ class _LoginScreenState extends State<LoginScreen> {
               // Login Button
               PrimaryButton(
                 text: 'Login',
-                onPressed: () => context.go('/dashboard'),
+                onPressed: _login,
+                isLoading: authProvider.isLoading,
               ),
               const SizedBox(height: 32),
 
