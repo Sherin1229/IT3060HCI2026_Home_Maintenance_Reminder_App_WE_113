@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/auth_provider.dart';
 
 import '../../config/app_colors.dart';
 import '../../utils/constants.dart';
@@ -30,20 +33,52 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     }
   }
 
-  void _showResetLinkMessage() {
-    final messenger = ScaffoldMessenger.of(context);
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          content: Text('Password reset link will be sent to your email.'),
-        ),
-      );
+  Future<void> _resetPassword() async {
+  final email = _emailController.text.trim();
+
+  if (email.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Please enter your email address.'),
+      ),
+    );
+    return;
   }
 
+  final authProvider = context.read<AuthProvider>();
+
+  final success = await authProvider.resetPassword(
+    email: email,
+  );
+
+  if (!mounted) return;
+
+  if (success) {
+    _emailController.clear();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Password reset link has been sent to your email.',
+        ),
+      ),
+    );
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          authProvider.errorMessage ??
+              'Failed to send reset link. Please try again.',
+        ),
+      ),
+    );
+  }
+}
+
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+Widget build(BuildContext context) {
+  final theme = Theme.of(context);
+  final authProvider = context.watch<AuthProvider>();
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -161,7 +196,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               const SizedBox(height: AppConstants.paddingLarge),
               PrimaryButton(
                 text: 'Send Reset Link',
-                onPressed: _showResetLinkMessage,
+                onPressed: _resetPassword,
+                isLoading: authProvider.isLoading,
               ),
               const SizedBox(height: 32),
               Row(
