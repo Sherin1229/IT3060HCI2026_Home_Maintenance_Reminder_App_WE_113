@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../../providers/auth_provider.dart';
 
 import '../../config/app_colors.dart';
 import '../../utils/constants.dart';
@@ -43,9 +46,63 @@ class _SignupScreenState extends State<SignupScreen> {
     }
   }
 
+  Future<void> _signUp() async {
+    final fullName = _fullNameController.text.trim();
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
+    final password = _passwordController.text;
+    final confirmPassword = _confirmPasswordController.text;
+
+    if (fullName.isEmpty ||
+        email.isEmpty ||
+        phone.isEmpty ||
+        password.isEmpty ||
+        confirmPassword.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all fields.')),
+      );
+      return;
+    }
+
+    if (password != confirmPassword) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Passwords do not match.')));
+      return;
+    }
+
+    if (!_hasAcceptedTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please agree to the Terms & Conditions.'),
+        ),
+      );
+      return;
+    }
+
+    final authProvider = context.read<AuthProvider>();
+
+    final success = await authProvider.signUp(email: email, password: password);
+
+    if (!mounted) return;
+
+    if (success) {
+      context.go('/dashboard');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            authProvider.errorMessage ?? 'Sign up failed. Please try again.',
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final authProvider = context.watch<AuthProvider>();
 
     return Scaffold(
       backgroundColor: AppColors.surface,
@@ -213,7 +270,8 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: AppConstants.paddingLarge),
               PrimaryButton(
                 text: 'Sign Up',
-                onPressed: () => context.go('/dashboard'),
+                onPressed: _signUp,
+                isLoading: authProvider.isLoading,
               ),
               const SizedBox(height: 32),
               Row(
