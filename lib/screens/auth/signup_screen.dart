@@ -82,8 +82,13 @@ class _SignupScreenState extends State<SignupScreen> {
 
     final authProvider = context.read<AuthProvider>();
 
-    final success = await authProvider.signUp(email: email, password: password);
-
+    final success = await authProvider.signUp(
+      fullName: fullName,
+      email: email,
+      phone: phone,
+      password: password,
+    );
+    
     if (!mounted) return;
 
     if (success) {
