@@ -12,7 +12,20 @@
           "package_name": "com.example.homiq"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "1032824326223-di795vqcod0qbmot6b9b3a3358rtgf64.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.homiq",
+            "certificate_hash": "5dd901450557cd87bbb29d015c3b75d7c486ffa9"
+          }
+        },
+        {
+          "client_id": "1032824326223-5hhojm6kh0ge7co6fnjg0mlpd13n2nn0.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyDXTm25AAGuVUGOiX4zsHZDHG3uPb1TLm0"
@@ -20,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1032824326223-5hhojm6kh0ge7co6fnjg0mlpd13n2nn0.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1032824326223-56jiudr2mo4c3tqap3m1iiivkubb10er.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.homiq"
+              }
+            }
+          ]
         }
       }
     }

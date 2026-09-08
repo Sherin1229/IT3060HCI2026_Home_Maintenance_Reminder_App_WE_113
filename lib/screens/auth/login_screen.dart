@@ -64,6 +64,27 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _signInWithGoogle() async {
+    final authProvider = context.read<AuthProvider>();
+
+    final success = await authProvider.signInWithGoogle();
+
+    if (!mounted) return;
+
+    if (success) {
+      context.go('/dashboard');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            authProvider.errorMessage ??
+                'Unable to sign in with Google. Please try again.',
+          ),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -220,9 +241,7 @@ class _LoginScreenState extends State<LoginScreen> {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: () {
-                    // UI only: Google Sign-In logic disabled for now
-                  },
+                  onPressed: authProvider.isLoading ? null : _signInWithGoogle,
                   icon: Image.asset('assets/logos/google_logo.png', height: 24, width: 24),
                   label: const Text('Continue with Google', style: TextStyle(color: AppColors.textPrimary)),
                   style: OutlinedButton.styleFrom(
