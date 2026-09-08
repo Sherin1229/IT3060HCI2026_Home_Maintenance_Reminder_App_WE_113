@@ -28,6 +28,27 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _isConfirmPasswordObscure = true;
   bool _hasAcceptedTerms = false;
 
+  Future<void> _signUpWithGoogle() async {
+  final authProvider = context.read<AuthProvider>();
+
+  final success = await authProvider.signInWithGoogle();
+
+  if (!mounted) return;
+
+  if (success) {
+    context.go('/dashboard');
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          authProvider.errorMessage ??
+              'Unable to continue with Google. Please try again.',
+        ),
+      ),
+    );
+  }
+}
+
   @override
   void dispose() {
     _fullNameController.dispose();
@@ -302,9 +323,7 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               const SizedBox(height: AppConstants.paddingLarge),
               OutlinedButton.icon(
-                onPressed: () {
-                  // UI only: Google authentication will be connected later.
-                },
+                onPressed: authProvider.isLoading ? null : _signUpWithGoogle, 
                 icon: Image.asset(
                   'assets/logos/google_logo.png',
                   height: 24,

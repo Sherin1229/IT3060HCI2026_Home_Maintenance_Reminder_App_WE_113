@@ -35,6 +35,27 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> signInWithGoogle() async {
+    _setLoading(true);
+    _errorMessage = null;
+
+    try {
+      await _authService.signInWithGoogle();
+
+      _setLoading(false);
+      return true;
+    } on FirebaseAuthException catch (e) {
+      _errorMessage = _getAuthErrorMessage(e);
+      _setLoading(false);
+      return false;
+    } catch (e) {
+      debugPrint('Google sign in error: $e');
+      _errorMessage = 'Unable to sign in with Google. Please try again.';
+      _setLoading(false);
+      return false;
+    }
+  }
+
   Future<bool> signUp({
     required String fullName,
     required String email,
