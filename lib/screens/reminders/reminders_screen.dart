@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../config/app_colors.dart';
 import '../../utils/constants.dart';
@@ -94,7 +95,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
       backgroundColor: AppColors.background,
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // TODO: Navigate to Create Reminder when that route is available.
+          context.push('/reminders/create');
         },
         tooltip: 'Create reminder',
         backgroundColor: AppColors.primaryBlue,
