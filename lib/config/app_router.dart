@@ -8,6 +8,7 @@ import '../screens/auth/forgot_password_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/appliances/appliances_screen.dart';
 import '../screens/reminders/reminders_screen.dart';
+import '../screens/reminders/create_reminder_screen.dart';
 import '../screens/warranties/warranties_screen.dart';
 import '../screens/maintenance_history/maintenance_history_screen.dart';
 import '../screens/profile/profile_screen.dart';
@@ -19,8 +20,10 @@ class AppRouter {
   AppRouter._();
 
   // Root navigator key for dialogs or overlays that need to be shown outside the navigation shell
-  static final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
-  static final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> _rootNavigatorKey =
+      GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> _shellNavigatorKey =
+      GlobalKey<NavigatorState>();
 
   static final GoRouter router = GoRouter(
     initialLocation: '/login',
@@ -28,10 +31,7 @@ class AppRouter {
     debugLogDiagnostics: true,
     routes: [
       // Authentication Routes (outside the shell layout)
-      GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
-      ),
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/signup',
         builder: (context, state) => const SignupScreen(),
@@ -52,10 +52,7 @@ class AppRouter {
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) {
-          return MainNavigationShell(
-            state: state,
-            child: child,
-          );
+          return MainNavigationShell(state: state, child: child);
         },
         routes: [
           GoRoute(
@@ -69,6 +66,13 @@ class AppRouter {
           GoRoute(
             path: '/reminders',
             builder: (context, state) => const RemindersScreen(),
+            routes: [
+              GoRoute(
+                path: 'create',
+                parentNavigatorKey: _rootNavigatorKey,
+                builder: (context, state) => const CreateReminderScreen(),
+              ),
+            ],
           ),
           GoRoute(
             path: '/warranties',
