@@ -16,4 +16,14 @@ class UserService {
       'createdAt': FieldValue.serverTimestamp(),
     });
   }
+
+  Future<Map<String, dynamic>?> getUserProfile(String uid) async {
+    final document = await _firestore.collection('users').doc(uid).get();
+
+    if (!document.exists) {
+      return null;
+    }
+
+    return document.data();
+  }
 }
