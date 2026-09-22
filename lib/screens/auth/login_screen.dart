@@ -46,6 +46,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final success = await authProvider.login(
       email: email,
       password: password,
+      rememberMe: _rememberMe,
     );
 
     if (!mounted) return;
