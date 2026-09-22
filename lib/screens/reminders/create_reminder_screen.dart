@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 
 import '../../config/app_colors.dart';
+import '../../models/reminder_model.dart';
+import '../../providers/reminder_provider.dart';
 import '../../utils/constants.dart';
 import '../../widgets/primary_button.dart';
 
@@ -25,13 +29,20 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
   ];
 
   final _formKey = GlobalKey<FormState>();
+  final _titleController = TextEditingController();
+  final _locationController = TextEditingController();
+  final _notesController = TextEditingController();
   final _dateController = TextEditingController();
   final _timeController = TextEditingController();
+  String? _selectedCategory;
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
 
   @override
   void dispose() {
+    _titleController.dispose();
+    _locationController.dispose();
+    _notesController.dispose();
     _dateController.dispose();
     _timeController.dispose();
     super.dispose();
@@ -42,7 +53,7 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
     final date = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? today,
-      firstDate: DateTime(1900),
+      firstDate: today,
       lastDate: DateTime(today.year + 100, 12, 31),
     );
     if (!mounted || date == null) return;
@@ -62,20 +73,58 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
     _timeController.text = time.format(context);
   }
 
-  void _validateReminder() {
+  Future<void> _saveReminder() async {
     FocusScope.of(context).unfocus();
+
     if (!_formKey.currentState!.validate()) return;
 
-    // TODO: Connect validated form values to reminder persistence later.
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
+          content: Text('You must be logged in to create a reminder.'),
+        ),
+      );
+      return;
+    }
+
+    final reminder = ReminderModel(
+      id: '',
+      userId: user.uid,
+      title: _titleController.text.trim(),
+      category: _selectedCategory!,
+      location: _locationController.text.trim(),
+      date: _selectedDate!,
+      time: _selectedTime != null ? _timeController.text : null,
+      notes: _notesController.text.trim().isEmpty
+          ? null
+          : _notesController.text.trim(),
+      createdAt: DateTime.now(),
+    );
+
+    final reminderProvider = context.read<ReminderProvider>();
+
+    final success = await reminderProvider.createReminder(reminder);
+
+    if (!mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Reminder created successfully.')),
+      );
+
+      context.pop();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
           content: Text(
-            'Reminder details are valid. Saving is not available yet.',
+            reminderProvider.errorMessage ??
+                'Unable to save reminder. Please try again.',
           ),
         ),
       );
+    }
   }
 
   Widget _field({required String label, required Widget child}) {
@@ -130,6 +179,7 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                 _field(
                   label: 'Title *',
                   child: TextFormField(
+                    controller: _titleController,
                     textCapitalization: TextCapitalization.sentences,
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
@@ -143,6 +193,7 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                 _field(
                   label: 'Category *',
                   child: DropdownButtonFormField<String>(
+                    initialValue: _selectedCategory,
                     isExpanded: true,
                     decoration: const InputDecoration(
                       hintText: 'Select a category',
@@ -156,7 +207,11 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                           ),
                         )
                         .toList(),
-                    onChanged: (_) {},
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedCategory = value;
+                      });
+                    },
                     validator: (value) =>
                         value == null ? 'Please select a category.' : null,
                   ),
@@ -164,6 +219,7 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                 _field(
                   label: 'Appliance / Location',
                   child: TextFormField(
+                    controller: _locationController,
                     textCapitalization: TextCapitalization.words,
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
@@ -200,6 +256,7 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                 _field(
                   label: 'Notes',
                   child: TextFormField(
+                    controller: _notesController,
                     minLines: 4,
                     maxLines: 6,
                     maxLength: 200,
@@ -214,7 +271,8 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                 const SizedBox(height: AppConstants.paddingSmall),
                 PrimaryButton(
                   text: 'Save Reminder',
-                  onPressed: _validateReminder,
+                  onPressed: _saveReminder,
+                  isLoading: context.watch<ReminderProvider>().isLoading,
                 ),
               ],
             ),
