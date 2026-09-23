@@ -10,6 +10,7 @@ import '../screens/appliances/appliances_screen.dart';
 import '../screens/reminders/reminders_screen.dart';
 import '../screens/reminders/create_reminder_screen.dart';
 import '../screens/warranties/warranties_screen.dart';
+import '../screens/warranties/add_warranty_screen.dart';
 import '../screens/maintenance_history/maintenance_history_screen.dart';
 import '../screens/profile/profile_screen.dart';
 
@@ -46,6 +47,11 @@ class AppRouter {
         path: '/maintenance-history',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const MaintenanceHistoryScreen(),
+      ),
+      GoRoute(
+        path: '/add-warranty',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AddWarrantyScreen(),
       ),
 
       // Main Navigation Shell (includes the persistent BottomNavigationBar)

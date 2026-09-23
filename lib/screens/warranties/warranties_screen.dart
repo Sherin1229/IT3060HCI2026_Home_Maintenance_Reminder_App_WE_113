@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../config/app_colors.dart';
 import '../../utils/constants.dart';
@@ -294,7 +295,7 @@ class _WarrantiesScreenState extends State<WarrantiesScreen> {
             if (_mockWarranties.isEmpty)
               _EmptyWarrantyState(
                 onAddWarranty: () {
-                  _showComingSoonMessage('Add Warranty is coming soon.');
+                  context.push('/add-warranty');
                 },
               )
             else if (visibleWarranties.isEmpty)
@@ -319,8 +320,7 @@ class _WarrantiesScreenState extends State<WarrantiesScreen> {
             const SizedBox(height: AppConstants.paddingLarge),
             ElevatedButton.icon(
               onPressed: () {
-                // TODO: Navigate to Add Warranty when that screen is available.
-                _showComingSoonMessage('Add Warranty is coming soon.');
+                context.push('/add-warranty');
               },
               icon: const Icon(Icons.add_rounded),
               label: const Text('Add Warranty'),
