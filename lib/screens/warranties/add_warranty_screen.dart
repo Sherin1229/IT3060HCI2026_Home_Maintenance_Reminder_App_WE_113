@@ -4,6 +4,26 @@ import 'package:go_router/go_router.dart';
 import '../../config/app_colors.dart';
 import '../../utils/constants.dart';
 
+class WarrantyDraft {
+  final String applianceType;
+  final String brand;
+  final String model;
+  final DateTime warrantyStartDate;
+  final DateTime warrantyEndDate;
+  final String provider;
+  final String notes;
+
+  const WarrantyDraft({
+    required this.applianceType,
+    required this.brand,
+    required this.model,
+    required this.warrantyStartDate,
+    required this.warrantyEndDate,
+    required this.provider,
+    required this.notes,
+  });
+}
+
 class AddWarrantyScreen extends StatefulWidget {
   const AddWarrantyScreen({super.key});
 
@@ -31,6 +51,7 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
   String? _applianceType;
   DateTime? _startDate;
   DateTime? _endDate;
+  bool _hasAttemptedValidation = false;
 
   @override
   void dispose() {
@@ -70,6 +91,7 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
       _startDate = DateUtils.dateOnly(selectedDate);
       _startDateController.text = _formatDate(selectedDate);
     });
+    _revalidateAfterChange();
   }
 
   Future<void> _selectEndDate() async {
@@ -87,6 +109,7 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
       _endDate = DateUtils.dateOnly(selectedDate);
       _endDateController.text = _formatDate(selectedDate);
     });
+    _revalidateAfterChange();
   }
 
   String? _requiredTextValidator(String? value, String fieldName) {
@@ -96,21 +119,31 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
     return null;
   }
 
+  void _revalidateAfterChange() {
+    if (_hasAttemptedValidation) {
+      _formKey.currentState?.validate();
+    }
+  }
+
   void _continueToNextStep() {
     FocusScope.of(context).unfocus();
 
+    _hasAttemptedValidation = true;
+
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Appliance details are ready. Document Upload is the next step.',
-          ),
-        ),
-      );
-    // TODO: Navigate to Document Upload when Step 2 is implemented.
+    context.push(
+      '/add-warranty/document',
+      extra: WarrantyDraft(
+        applianceType: _applianceType!,
+        brand: _brandController.text.trim(),
+        model: _modelController.text.trim(),
+        warrantyStartDate: _startDate!,
+        warrantyEndDate: _endDate!,
+        provider: _providerController.text.trim(),
+        notes: _notesController.text.trim(),
+      ),
+    );
   }
 
   @override
@@ -158,6 +191,7 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
                       .toList(),
                   onChanged: (value) {
                     setState(() => _applianceType = value);
+                    _revalidateAfterChange();
                   },
                   validator: (value) =>
                       value == null ? 'Please select an appliance type.' : null,
@@ -172,6 +206,7 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
                   controller: _brandController,
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(hintText: 'Enter brand'),
+                  onChanged: (_) => _revalidateAfterChange(),
                   validator: (value) => _requiredTextValidator(value, 'brand'),
                 ),
               ),
@@ -186,6 +221,7 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
                   decoration: const InputDecoration(
                     hintText: 'Enter model number',
                   ),
+                  onChanged: (_) => _revalidateAfterChange(),
                   validator: (value) => _requiredTextValidator(value, 'model'),
                 ),
               ),

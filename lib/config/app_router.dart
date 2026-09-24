@@ -11,6 +11,7 @@ import '../screens/reminders/reminders_screen.dart';
 import '../screens/reminders/create_reminder_screen.dart';
 import '../screens/warranties/warranties_screen.dart';
 import '../screens/warranties/add_warranty_screen.dart';
+import '../screens/warranties/add_warranty_document_screen.dart';
 import '../screens/maintenance_history/maintenance_history_screen.dart';
 import '../screens/profile/profile_screen.dart';
 
@@ -52,6 +53,17 @@ class AppRouter {
         path: '/add-warranty',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const AddWarrantyScreen(),
+      ),
+      GoRoute(
+        path: '/add-warranty/document',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final draft = state.extra;
+          if (draft is! WarrantyDraft) {
+            return const AddWarrantyScreen();
+          }
+          return AddWarrantyDocumentScreen(draft: draft);
+        },
       ),
 
       // Main Navigation Shell (includes the persistent BottomNavigationBar)
