@@ -3,9 +3,11 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../config/app_colors.dart';
 import '../../utils/constants.dart';
+import '../../services/warranty_service.dart';
 import 'add_warranty_screen.dart';
 
 class AddWarrantyDocumentScreen extends StatefulWidget {
@@ -19,6 +21,8 @@ class AddWarrantyDocumentScreen extends StatefulWidget {
 }
 
 class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
+  final WarrantyService _warrantyService = WarrantyService();
+  bool _isSaving = false;
   static const _documentTypes = [
     'Warranty Card',
     'Purchase Receipt',
@@ -164,21 +168,72 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
     );
   }
 
-  void _saveWarranty() {
+  Future<void> _saveWarranty() async {
     FocusScope.of(context).unfocus();
+
     final hasFile = _selectedFile != null;
 
     setState(() => _showFileError = !hasFile);
+
     final isFormValid = _formKey.currentState?.validate() ?? false;
 
     if (!hasFile || !isFormValid) return;
 
-    ScaffoldMessenger.of(context)
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        const SnackBar(content: Text('Warranty is ready to save.')),
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please log in before saving a warranty.'),
+        ),
       );
-    // TODO: Save widget.draft and the selected document when backend work begins.
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      await _warrantyService.createWarranty(
+        userId: user.uid,
+        applianceType: widget.draft.applianceType,
+        brand: widget.draft.brand,
+        model: widget.draft.model,
+        warrantyStartDate: widget.draft.warrantyStartDate,
+        warrantyEndDate: widget.draft.warrantyEndDate,
+        provider: widget.draft.provider,
+        notes: widget.draft.notes,
+        documentType: _documentType!,
+        documentName: _selectedFile!.name,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Warranty saved successfully.'),
+        ),
+      );
+
+      context.go('/warranties');
+    } catch (e) {
+      debugPrint('Warranty save error: $e');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Unable to save warranty. Please try again.'),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
   }
 
   @override
@@ -269,9 +324,18 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
               ),
               const SizedBox(height: 32),
               ElevatedButton.icon(
-                onPressed: _saveWarranty,
-                icon: const Icon(Icons.check_rounded),
-                label: const Text('Save Warranty'),
+                onPressed: _isSaving ? null : _saveWarranty,
+                icon: _isSaving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.check_rounded),
+                label: Text(_isSaving ? 'Saving...' : 'Save Warranty'),
               ),
             ],
           ),
