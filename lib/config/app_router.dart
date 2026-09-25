@@ -7,6 +7,9 @@ import '../screens/auth/signup_screen.dart';
 import '../screens/auth/forgot_password_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/appliances/appliances_screen.dart';
+import '../screens/appliances/add_appliance_screen.dart';
+import '../screens/appliances/appliance_details_screen.dart';
+import '../models/appliance_model.dart';
 import '../screens/reminders/reminders_screen.dart';
 import '../screens/reminders/create_reminder_screen.dart';
 import '../screens/warranties/warranties_screen.dart';
@@ -65,6 +68,11 @@ class AppRouter {
           return AddWarrantyDocumentScreen(draft: draft);
         },
       ),
+      GoRoute(
+        path: '/appliances/add',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AddApplianceScreen(),
+      ),
 
       // Main Navigation Shell (includes the persistent BottomNavigationBar)
       ShellRoute(
@@ -80,6 +88,15 @@ class AppRouter {
           GoRoute(
             path: '/appliances',
             builder: (context, state) => const AppliancesScreen(),
+            routes: [
+              GoRoute(
+                path: 'details',
+                builder: (context, state) {
+                  final appliance = state.extra as ApplianceItem?;
+                  return ApplianceDetailsScreen(appliance: appliance);
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: '/reminders',
