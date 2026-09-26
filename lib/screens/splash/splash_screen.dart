@@ -1,12 +1,11 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../config/app_colors.dart';
 import '../../widgets/app_logo.dart';
 
-/// HomiQ Splash Screen
-/// Displays for ~3 seconds with a smooth entrance animation,
-/// then automatically navigates to the Onboarding flow.
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -16,166 +15,199 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _fadeAnimation;
-  late Animation<double> _scaleAnimation;
+  late final AnimationController _controller;
+  late final Animation<double> _fade;
+  late final Animation<double> _scale;
   Timer? _timer;
 
   @override
   void initState() {
     super.initState();
-
-    // Entrance Animation (fade-in & scale-in)
-    _animationController = AnimationController(
+    _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 1100),
     );
-
-    _fadeAnimation = CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeIn,
-    );
-
-    _scaleAnimation = Tween<double>(begin: 0.85, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
-    );
-
-    _animationController.forward();
-
-    // 3-Second Timer transition to Onboarding
+    _fade = CurvedAnimation(parent: _controller, curve: Curves.easeOut);
+    _scale = Tween<double>(
+      begin: .88,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutBack));
+    _controller.forward();
     _timer = Timer(const Duration(seconds: 3), () {
-      if (mounted) {
-        context.go('/onboarding');
-      }
+      if (mounted) context.go('/onboarding');
     });
   }
 
   @override
   void dispose() {
     _timer?.cancel();
-    _animationController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
+      body: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [AppColors.primaryDark, AppColors.primaryBlue],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF123E9D),
+              AppColors.primaryBlue,
+              Color(0xFF38A9F4),
+            ],
+            stops: [0, .52, 1],
           ),
         ),
         child: SafeArea(
-          child: Stack(
-            children: [
-              // Decorative background glow elements
-              Positioned(
-                top: -80,
-                right: -80,
-                child: Container(
-                  width: 240,
-                  height: 240,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Colors.white.withAlpha(15),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: -100,
-                left: -60,
-                child: Container(
-                  width: 300,
-                  height: 300,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: AppColors.secondaryTeal.withAlpha(25),
-                  ),
-                ),
-              ),
-
-              // Center Logo & Branding
-              Center(
-                child: FadeTransition(
-                  opacity: _fadeAnimation,
-                  child: ScaleTransition(
-                    scale: _scaleAnimation,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // Container card for logo
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x25000000),
-                                blurRadius: 20,
-                                offset: Offset(0, 10),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final logoSize = (constraints.maxWidth * .43).clamp(142.0, 180.0);
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  const CustomPaint(painter: _SplashBackgroundPainter()),
+                  Positioned(
+                    top: constraints.maxHeight * .24,
+                    left: 0,
+                    right: 0,
+                    child: FadeTransition(
+                      opacity: _fade,
+                      child: ScaleTransition(
+                        scale: _scale,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: logoSize,
+                              height: logoSize,
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(34),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x33052B70),
+                                    blurRadius: 32,
+                                    offset: Offset(0, 16),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                          child: const AppLogo(height: 72, width: 72),
+                              child: const AppLogo(fit: BoxFit.contain),
+                            ),
+                            const SizedBox(height: 24),
+                            const Text(
+                              'HomiQ',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 42,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -1.2,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Smart care for your home',
+                              style: TextStyle(
+                                color: Color(0xFFE2F2FF),
+                                fontSize: 18,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 24),
-
-                        // App Title
-                        const Text(
-                          'HomiQ',
-                          style: TextStyle(
-                            fontSize: 32,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        // Tagline
-                        const Text(
-                          'Smart care for your home',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF93C5FD), // Soft blue
-                            letterSpacing: 0.2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // Subtle Loading indicator at bottom
-              Positioned(
-                bottom: 36,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.white.withAlpha(180),
                       ),
                     ),
                   ),
-                ),
-              ),
-            ],
+                ],
+              );
+            },
           ),
         ),
       ),
     );
   }
+}
+
+class _SplashBackgroundPainter extends CustomPainter {
+  const _SplashBackgroundPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final glow = Paint()..color = Colors.white.withValues(alpha: .09);
+    canvas.drawCircle(
+      Offset(size.width * 1.02, size.height * .02),
+      size.width * .48,
+      glow,
+    );
+    canvas.drawCircle(Offset(-12, size.height * .35), size.width * .13, glow);
+
+    final upperWave = Path()
+      ..moveTo(0, size.height * .18)
+      ..cubicTo(
+        size.width * .25,
+        size.height * .31,
+        size.width * .68,
+        size.height * .27,
+        size.width,
+        size.height * .4,
+      )
+      ..lineTo(size.width, size.height * .48)
+      ..cubicTo(
+        size.width * .62,
+        size.height * .34,
+        size.width * .26,
+        size.height * .4,
+        0,
+        size.height * .25,
+      )
+      ..close();
+    canvas.drawPath(
+      upperWave,
+      Paint()..color = Colors.white.withValues(alpha: .1),
+    );
+
+    final lowerWave = Path()
+      ..moveTo(0, size.height * .76)
+      ..cubicTo(
+        size.width * .28,
+        size.height * .67,
+        size.width * .57,
+        size.height * .91,
+        size.width,
+        size.height * .76,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(
+      lowerWave,
+      Paint()..color = const Color(0xFF84D7FB).withValues(alpha: .28),
+    );
+
+    final home = Path()
+      ..moveTo(size.width * .54, size.height * .89)
+      ..lineTo(size.width * .76, size.height * .78)
+      ..lineTo(size.width * .96, size.height * .89)
+      ..lineTo(size.width * .92, size.height * .89)
+      ..lineTo(size.width * .92, size.height)
+      ..lineTo(size.width * .61, size.height)
+      ..lineTo(size.width * .61, size.height * .89)
+      ..close();
+    canvas.drawPath(home, Paint()..color = Colors.white.withValues(alpha: .11));
+    canvas.drawRect(
+      Rect.fromLTWH(
+        size.width * .72,
+        size.height * .9,
+        size.width * .1,
+        size.height * .1,
+      ),
+      Paint()..color = Colors.white.withValues(alpha: .13),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
