@@ -18,6 +18,10 @@ import '../screens/warranties/warranties_screen.dart';
 import '../screens/warranties/add_warranty_screen.dart';
 import '../screens/warranties/add_warranty_document_screen.dart';
 import '../screens/maintenance_history/maintenance_history_screen.dart';
+import '../screens/maintenance_history/maintenance_form_screen.dart';
+import '../screens/maintenance_history/maintenance_models.dart';
+import '../screens/maintenance_history/maintenance_overview_screen.dart';
+import '../screens/maintenance_history/maintenance_record_details_screen.dart';
 import '../screens/profile/profile_screen.dart';
 
 /// Centralized Router for HomiQ
@@ -60,9 +64,48 @@ class AppRouter {
 
       // Standalone Routes pushed on top of the main navigation shell
       GoRoute(
+        path: '/maintenance',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const MaintenanceOverviewScreen(),
+      ),
+      GoRoute(
         path: '/maintenance-history',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const MaintenanceHistoryScreen(),
+      ),
+      GoRoute(
+        path: '/maintenance/history',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const MaintenanceHistoryScreen(),
+      ),
+      GoRoute(
+        path: '/maintenance/add',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => MaintenanceFormScreen(
+          mode: MaintenanceFormMode.add,
+          record: state.extra is MaintenanceRecord
+              ? state.extra as MaintenanceRecord
+              : null,
+        ),
+      ),
+      GoRoute(
+        path: '/maintenance/complete',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => MaintenanceFormScreen(
+          mode: MaintenanceFormMode.complete,
+          record: state.extra is MaintenanceRecord
+              ? state.extra as MaintenanceRecord
+              : maintenanceRecords.first,
+        ),
+      ),
+      GoRoute(
+        path: '/maintenance/details',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => MaintenanceRecordDetailsScreen(
+          record: state.extra is MaintenanceRecord
+              ? state.extra as MaintenanceRecord
+              : maintenanceRecords.first,
+        ),
       ),
       GoRoute(
         path: '/add-warranty',
