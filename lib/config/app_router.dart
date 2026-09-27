@@ -17,6 +17,8 @@ import '../screens/reminders/create_reminder_screen.dart';
 import '../screens/warranties/warranties_screen.dart';
 import '../screens/warranties/add_warranty_screen.dart';
 import '../screens/warranties/add_warranty_document_screen.dart';
+import '../screens/warranties/warranty_details_screen.dart';
+import '../screens/warranties/edit_warranty_screen.dart';
 import '../screens/maintenance_history/maintenance_history_screen.dart';
 import '../screens/maintenance_history/maintenance_form_screen.dart';
 import '../screens/maintenance_history/maintenance_models.dart';
@@ -122,6 +124,16 @@ class AppRouter {
           }
           return AddWarrantyDocumentScreen(draft: draft);
         },
+      ),
+      GoRoute(
+        path: '/warranties/details',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const WarrantyDetailsScreen(),
+      ),
+      GoRoute(
+        path: '/warranties/edit',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const EditWarrantyScreen(),
       ),
       GoRoute(
         path: '/appliances/add',
