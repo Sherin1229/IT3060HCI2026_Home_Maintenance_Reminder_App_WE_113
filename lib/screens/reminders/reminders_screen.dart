@@ -255,6 +255,10 @@ class _RemindersScreenState extends State<RemindersScreen> {
                       status: _getStatus(visibleReminders[index]),
                       timing: _getTiming(visibleReminders[index]),
                       applianceIcon: _getIcon(visibleReminders[index].category),
+                      onTap: () {
+                        // TODO: Pass the selected real reminder during backend integration.
+                        context.push('/reminders/details');
+                      },
                     ),
                     if (index != visibleReminders.length - 1)
                       const SizedBox(height: 12),
