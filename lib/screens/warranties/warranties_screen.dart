@@ -297,18 +297,6 @@ class _WarrantiesScreenState extends State<WarrantiesScreen> {
 
         final visibleWarranties = _getVisibleWarranties(warranties);
 
-        final activeCount = warranties
-            .where((item) => item.status == _WarrantyStatus.active)
-            .length;
-
-        final expiringCount = warranties
-            .where((item) => item.status == _WarrantyStatus.expiringSoon)
-            .length;
-
-        final expiredCount = warranties
-            .where((item) => item.status == _WarrantyStatus.expired)
-            .length;
-
         return Scaffold(
           backgroundColor: AppColors.background,
           appBar: AppBar(
@@ -348,63 +336,9 @@ class _WarrantiesScreenState extends State<WarrantiesScreen> {
 
                 const SizedBox(height: AppConstants.paddingMedium),
 
-                if (expiringCount > 0) ...[
-                  _ExpiryAlertCard(
-                    count: expiringCount,
-                    onTap: () {
-                      setState(
-                        () => _selectedFilter = _WarrantyFilter.expiring,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: AppConstants.paddingMedium),
-                ],
-
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _WarrantyFilterChip(
-                        label: 'All (${warranties.length})',
-                        isSelected: _selectedFilter == _WarrantyFilter.all,
-                        onSelected: () {
-                          setState(() => _selectedFilter = _WarrantyFilter.all);
-                        },
-                      ),
-                      const SizedBox(width: AppConstants.paddingSmall),
-                      _WarrantyFilterChip(
-                        label: 'Active ($activeCount)',
-                        isSelected: _selectedFilter == _WarrantyFilter.active,
-                        onSelected: () {
-                          setState(
-                            () => _selectedFilter = _WarrantyFilter.active,
-                          );
-                        },
-                      ),
-                      const SizedBox(width: AppConstants.paddingSmall),
-                      _WarrantyFilterChip(
-                        label: 'Expiring ($expiringCount)',
-                        isSelected: _selectedFilter == _WarrantyFilter.expiring,
-                        onSelected: () {
-                          setState(
-                            () => _selectedFilter = _WarrantyFilter.expiring,
-                          );
-                        },
-                      ),
-                      const SizedBox(width: AppConstants.paddingSmall),
-                      _WarrantyFilterChip(
-                        label: 'Expired ($expiredCount)',
-                        isSelected: _selectedFilter == _WarrantyFilter.expired,
-                        onSelected: () {
-                          setState(
-                            () => _selectedFilter = _WarrantyFilter.expired,
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+                _ExpiryInformationCard(
+                  onTap: () => context.push('/warranties/expiry'),
                 ),
-
                 const SizedBox(height: AppConstants.paddingMedium),
 
                 if (warranties.isEmpty)
@@ -534,11 +468,10 @@ class _WarrantySearchBar extends StatelessWidget {
   }
 }
 
-class _ExpiryAlertCard extends StatelessWidget {
-  final int count;
+class _ExpiryInformationCard extends StatelessWidget {
   final VoidCallback onTap;
 
-  const _ExpiryAlertCard({required this.count, required this.onTap});
+  const _ExpiryInformationCard({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -576,7 +509,7 @@ class _ExpiryAlertCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '$count ${count == 1 ? 'Warranty' : 'Warranties'} Expiring Soon',
+                      'Warranty Expiry Information',
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: const Color(0xFF9A3412),
                         fontWeight: FontWeight.w600,
@@ -584,7 +517,7 @@ class _ExpiryAlertCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'View expiry details',
+                      'View warranties that are expiring soon',
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: const Color(0xFFC2410C),
                       ),
@@ -594,50 +527,6 @@ class _ExpiryAlertCard extends StatelessWidget {
               ),
               const Icon(Icons.chevron_right_rounded, color: Color(0xFFC2410C)),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _WarrantyFilterChip extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onSelected;
-
-  const _WarrantyFilterChip({
-    required this.label,
-    required this.isSelected,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Material(
-      color: isSelected ? AppColors.primaryBlue : AppColors.surface,
-      borderRadius: BorderRadius.circular(24),
-      child: InkWell(
-        onTap: onSelected,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 42),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: isSelected ? AppColors.primaryBlue : AppColors.border,
-            ),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: isSelected ? AppColors.surface : AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
           ),
         ),
       ),
