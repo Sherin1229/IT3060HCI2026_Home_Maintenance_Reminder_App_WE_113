@@ -156,14 +156,6 @@ class _RemindersScreenState extends State<RemindersScreen> {
                       ),
                     ),
                     const Spacer(),
-                    IconButton(
-                      onPressed: () {
-                        // Notifications will be connected later.
-                      },
-                      tooltip: 'Notifications',
-                      icon: const Icon(Icons.notifications_none_rounded),
-                    ),
-                    const SizedBox(width: 4),
                     CircleAvatar(
                       radius: 19,
                       backgroundColor: const Color(0xFFDBEAFE),
@@ -255,6 +247,10 @@ class _RemindersScreenState extends State<RemindersScreen> {
                       status: _getStatus(visibleReminders[index]),
                       timing: _getTiming(visibleReminders[index]),
                       applianceIcon: _getIcon(visibleReminders[index].category),
+                      onTap: () {
+                        // TODO: Pass the selected real reminder during backend integration.
+                        context.push('/reminders/details');
+                      },
                     ),
                     if (index != visibleReminders.length - 1)
                       const SizedBox(height: 12),
