@@ -14,7 +14,8 @@ class DashboardScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.history_rounded),
             tooltip: 'Maintenance History',
-            onPressed: () => context.push('/maintenance-history'),
+            // TEMPORARY: Maintenance entry until Dashboard implementation is completed.
+            onPressed: () => context.push('/maintenance'),
           ),
         ],
       ),
@@ -47,7 +48,8 @@ class DashboardScreen extends StatelessWidget {
                       const Text('Total Appliances: 0\nPending Reminders: 0'),
                       const SizedBox(height: 12),
                       ElevatedButton(
-                        onPressed: () => context.push('/maintenance-history'),
+                        // TEMPORARY: Maintenance entry until Dashboard implementation is completed.
+                        onPressed: () => context.push('/maintenance'),
                         child: const Text('View Maintenance History'),
                       ),
                     ],
