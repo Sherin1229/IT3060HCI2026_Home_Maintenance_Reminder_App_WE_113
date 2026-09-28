@@ -14,6 +14,9 @@ import '../screens/appliances/appliance_details_screen.dart';
 import '../models/appliance_model.dart';
 import '../screens/reminders/reminders_screen.dart';
 import '../screens/reminders/create_reminder_screen.dart';
+import '../screens/reminders/reminder_details_screen.dart';
+import '../screens/reminders/reminder_schedule_screen.dart';
+import '../screens/reminders/edit_reminder_screen.dart';
 import '../screens/warranties/warranties_screen.dart';
 import '../screens/warranties/add_warranty_screen.dart';
 import '../screens/warranties/add_warranty_document_screen.dart';
@@ -140,6 +143,25 @@ class AppRouter {
         path: '/warranties/expiry',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const WarrantyExpiryScreen(),
+      ),
+      GoRoute(
+        path: '/reminders/details',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ReminderDetailsScreen(),
+      ),
+      GoRoute(
+        path: '/reminders/schedule',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => ReminderScheduleScreen(
+          initialSelection: state.extra is ReminderScheduleSelection
+              ? state.extra as ReminderScheduleSelection
+              : null,
+        ),
+      ),
+      GoRoute(
+        path: '/reminders/edit',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const EditReminderScreen(),
       ),
       GoRoute(
         path: '/appliances/add',

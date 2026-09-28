@@ -1,25 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:provider/provider.dart';
 
 import '../../config/app_colors.dart';
-import '../../models/reminder_model.dart';
-import '../../providers/reminder_provider.dart';
 import '../../utils/constants.dart';
 import '../../widgets/primary_button.dart';
 import 'reminder_schedule_screen.dart';
 import 'widgets/reminder_schedule_card.dart';
 
-class CreateReminderScreen extends StatefulWidget {
-  const CreateReminderScreen({super.key});
+class EditReminderScreen extends StatefulWidget {
+  const EditReminderScreen({super.key});
 
   @override
-  State<CreateReminderScreen> createState() => _CreateReminderScreenState();
+  State<EditReminderScreen> createState() => _EditReminderScreenState();
 }
 
-class _CreateReminderScreenState extends State<CreateReminderScreen> {
+class _EditReminderScreenState extends State<EditReminderScreen> {
   static const _categories = [
     'HVAC',
     'Refrigerator',
@@ -31,49 +27,59 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
   ];
 
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _locationController = TextEditingController();
-  final _notesController = TextEditingController();
-  final _dateController = TextEditingController();
-  final _timeController = TextEditingController();
-  String? _selectedCategory;
-  DateTime? _selectedDate;
-  TimeOfDay? _selectedTime;
-  ReminderScheduleSelection? _schedule;
+  final _titleController = TextEditingController(text: 'AC Service');
+  final _locationController = TextEditingController(text: 'Living Room');
+  final _dateController = TextEditingController(text: '15 May 2025');
+  final _timeController = TextEditingController(text: '10:00 AM');
+  final _notesController = TextEditingController(
+    text: 'Check filter, clean coils, and inspect gas levels.',
+  );
+
+  String? _selectedCategory = 'HVAC';
+  DateTime? _selectedDate = DateTime(2025, 5, 15);
+  TimeOfDay? _selectedTime = const TimeOfDay(hour: 10, minute: 0);
+  ReminderScheduleSelection _schedule = ReminderScheduleSelection(
+    frequency: 'Every 6 months',
+    date: DateTime(2025, 5, 15),
+    time: const TimeOfDay(hour: 10, minute: 0),
+  );
 
   @override
   void dispose() {
     _titleController.dispose();
     _locationController.dispose();
-    _notesController.dispose();
     _dateController.dispose();
     _timeController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
   Future<void> _pickDate() async {
-    final today = DateUtils.dateOnly(DateTime.now());
     final date = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? today,
-      firstDate: today,
-      lastDate: DateTime(today.year + 100, 12, 31),
+      initialDate: _selectedDate ?? DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
     );
-    if (!mounted || date == null) return;
-    _selectedDate = date;
-    _dateController.text = MaterialLocalizations.of(
-      context,
-    ).formatMediumDate(date);
+    if (date == null || !mounted) return;
+    setState(() {
+      _selectedDate = date;
+      _dateController.text = MaterialLocalizations.of(
+        context,
+      ).formatMediumDate(date);
+    });
   }
 
   Future<void> _pickTime() async {
     final time = await showTimePicker(
       context: context,
-      initialTime: _selectedTime ?? TimeOfDay.now(),
+      initialTime: _selectedTime ?? const TimeOfDay(hour: 10, minute: 0),
     );
-    if (!mounted || time == null) return;
-    _selectedTime = time;
-    _timeController.text = time.format(context);
+    if (time == null || !mounted) return;
+    setState(() {
+      _selectedTime = time;
+      _timeController.text = time.format(context);
+    });
   }
 
   Future<void> _openSchedule() async {
@@ -85,66 +91,24 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
   }
 
   String _scheduleSummary(BuildContext context) {
-    final schedule = _schedule;
-    if (schedule == null) return 'Set frequency and date';
     final date = MaterialLocalizations.of(
       context,
-    ).formatMediumDate(schedule.date);
-    return '${schedule.frequency} • $date • ${schedule.time.format(context)}';
+    ).formatMediumDate(_schedule.date);
+    return '${_schedule.frequency} • $date • ${_schedule.time.format(context)}';
   }
 
-  Future<void> _saveReminder() async {
+  void _updateReminder() {
     FocusScope.of(context).unfocus();
+    if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    if (!_formKey.currentState!.validate()) return;
-
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
+    // TODO: Persist reminder updates during backend integration.
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
         const SnackBar(
-          content: Text('You must be logged in to create a reminder.'),
+          content: Text('Reminder changes saved locally for preview.'),
         ),
       );
-      return;
-    }
-
-    final reminder = ReminderModel(
-      id: '',
-      userId: user.uid,
-      title: _titleController.text.trim(),
-      category: _selectedCategory!,
-      location: _locationController.text.trim(),
-      date: _selectedDate!,
-      time: _selectedTime != null ? _timeController.text : null,
-      notes: _notesController.text.trim().isEmpty
-          ? null
-          : _notesController.text.trim(),
-      createdAt: DateTime.now(),
-    );
-
-    final reminderProvider = context.read<ReminderProvider>();
-
-    final success = await reminderProvider.createReminder(reminder);
-
-    if (!mounted) return;
-
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Reminder created successfully.')),
-      );
-
-      context.pop();
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            reminderProvider.errorMessage ??
-                'Unable to save reminder. Please try again.',
-          ),
-        ),
-      );
-    }
   }
 
   Widget _field({required String label, required Widget child}) {
@@ -169,24 +133,19 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // TODO: Load selected reminder data during backend integration.
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
-        centerTitle: true,
-        title: const Text('Create Reminder'),
         leading: IconButton(
-          tooltip: 'Back',
+          onPressed: () => context.pop(),
+          tooltip: 'Back to reminder details',
           icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/reminders');
-            }
-          },
         ),
+        title: const Text('Edit Reminder'),
+        centerTitle: true,
       ),
       body: SafeArea(
+        top: false,
         child: SingleChildScrollView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.all(AppConstants.paddingLarge),
@@ -202,9 +161,6 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                     controller: _titleController,
                     textCapitalization: TextCapitalization.sentences,
                     textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      hintText: 'E.g. AC Service',
-                    ),
                     validator: (value) => value == null || value.trim().isEmpty
                         ? 'Please enter a title.'
                         : null,
@@ -215,9 +171,6 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                   child: DropdownButtonFormField<String>(
                     initialValue: _selectedCategory,
                     isExpanded: true,
-                    decoration: const InputDecoration(
-                      hintText: 'Select a category',
-                    ),
                     icon: const Icon(Icons.keyboard_arrow_down_rounded),
                     items: _categories
                         .map(
@@ -228,9 +181,7 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                         )
                         .toList(),
                     onChanged: (value) {
-                      setState(() {
-                        _selectedCategory = value;
-                      });
+                      setState(() => _selectedCategory = value);
                     },
                     validator: (value) =>
                         value == null ? 'Please select a category.' : null,
@@ -242,9 +193,6 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                     controller: _locationController,
                     textCapitalization: TextCapitalization.words,
                     textInputAction: TextInputAction.next,
-                    decoration: const InputDecoration(
-                      hintText: 'E.g. Living Room AC',
-                    ),
                   ),
                 ),
                 _field(
@@ -254,7 +202,6 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                     readOnly: true,
                     onTap: _pickDate,
                     decoration: const InputDecoration(
-                      hintText: 'Select date',
                       suffixIcon: Icon(Icons.calendar_today_outlined),
                     ),
                     validator: (_) =>
@@ -268,14 +215,13 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                     readOnly: true,
                     onTap: _pickTime,
                     decoration: const InputDecoration(
-                      hintText: 'Select time (optional)',
                       suffixIcon: Icon(Icons.access_time_rounded),
                     ),
                   ),
                 ),
                 ReminderScheduleCard(
                   summary: _scheduleSummary(context),
-                  isConfigured: _schedule != null,
+                  isConfigured: true,
                   onTap: _openSchedule,
                 ),
                 const SizedBox(height: AppConstants.paddingMedium),
@@ -296,9 +242,8 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                 ),
                 const SizedBox(height: AppConstants.paddingSmall),
                 PrimaryButton(
-                  text: 'Save Reminder',
-                  onPressed: _saveReminder,
-                  isLoading: context.watch<ReminderProvider>().isLoading,
+                  text: 'Update Reminder',
+                  onPressed: _updateReminder,
                 ),
               ],
             ),
