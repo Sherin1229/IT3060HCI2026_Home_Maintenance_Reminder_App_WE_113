@@ -156,14 +156,6 @@ class _RemindersScreenState extends State<RemindersScreen> {
                       ),
                     ),
                     const Spacer(),
-                    IconButton(
-                      onPressed: () {
-                        // Notifications will be connected later.
-                      },
-                      tooltip: 'Notifications',
-                      icon: const Icon(Icons.notifications_none_rounded),
-                    ),
-                    const SizedBox(width: 4),
                     CircleAvatar(
                       radius: 19,
                       backgroundColor: const Color(0xFFDBEAFE),
