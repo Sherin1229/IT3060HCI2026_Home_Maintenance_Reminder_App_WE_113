@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'add_warranty_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -8,7 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../config/app_colors.dart';
 import '../../utils/constants.dart';
 import '../../services/warranty_service.dart';
-import 'add_warranty_screen.dart';
+
 
 class AddWarrantyDocumentScreen extends StatefulWidget {
   final WarrantyDraft draft;
@@ -171,7 +172,8 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
   Future<void> _saveWarranty() async {
     FocusScope.of(context).unfocus();
 
-    final hasFile = _selectedFile != null;
+    final selectedFile = _selectedFile;
+    final hasFile = selectedFile != null;
 
     setState(() => _showFileError = !hasFile);
 
@@ -195,7 +197,12 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
     });
 
     try {
-      await _warrantyService.createWarranty(
+      // Read the selected document before creating the Firestore warranty.
+      final fileBytes = await selectedFile.readAsBytes();
+      final fileSize = _selectedFileSize ?? fileBytes.length;
+
+      // Create the warranty and keep its Firestore document ID.
+      final warrantyId = await _warrantyService.createWarranty(
         userId: user.uid,
         applianceType: widget.draft.applianceType,
         brand: widget.draft.brand,
@@ -205,7 +212,16 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
         provider: widget.draft.provider,
         notes: widget.draft.notes,
         documentType: _documentType!,
-        documentName: _selectedFile!.name,
+        documentName: selectedFile.name,
+      );
+
+      // Upload the actual document to Firebase Storage.
+      await _warrantyService.uploadWarrantyDocument(
+        userId: user.uid,
+        warrantyId: warrantyId,
+        fileBytes: fileBytes,
+        fileName: selectedFile.name,
+        fileSize: fileSize,
       );
 
       if (!mounted) return;
@@ -224,7 +240,9 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Unable to save warranty. Please try again.'),
+          content: Text(
+            'Unable to save warranty document. Please try again.',
+          ),
         ),
       );
     } finally {
