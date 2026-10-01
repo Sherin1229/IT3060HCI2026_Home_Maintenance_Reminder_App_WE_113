@@ -153,7 +153,21 @@ class AppRouter {
       GoRoute(
         path: '/warranties/edit',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const EditWarrantyScreen(),
+        builder: (context, state) {
+          final warrantyId = state.extra;
+
+          if (warrantyId is! String || warrantyId.isEmpty) {
+            return const Scaffold(
+              body: Center(
+                child: Text('Warranty information is unavailable.'),
+              ),
+            );
+          }
+
+          return EditWarrantyScreen(
+            warrantyId: warrantyId,
+          );
+        },
       ),
       GoRoute(
         path: '/warranties/expiry',
