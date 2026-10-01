@@ -24,6 +24,7 @@ enum _ApplianceType {
 enum _WarrantySort { expiryEarliest, expiryLatest }
 
 class _WarrantyItem {
+  final String warrantyId;
   final String appliance;
   final String model;
   final _WarrantyStatus status;
@@ -33,6 +34,7 @@ class _WarrantyItem {
   final IconData icon;
 
   const _WarrantyItem({
+    required this.warrantyId,
     required this.appliance,
     required this.model,
     required this.status,
@@ -138,6 +140,7 @@ class _WarrantiesScreenState extends State<WarrantiesScreen> {
       final year = expiryDate.year;
 
       return _WarrantyItem(
+        warrantyId: document.id,
         appliance: '$brand $applianceTypeName'.trim(),
         model: model,
         status: status,
@@ -358,8 +361,10 @@ class _WarrantiesScreenState extends State<WarrantiesScreen> {
                     _WarrantyCard(
                       warranty: visibleWarranties[index],
                       onTap: () {
-                        // TODO: Pass selected warranty data during backend integration.
-                        context.push('/warranties/details');
+                        context.push(
+                          '/warranties/details',
+                          extra: visibleWarranties[index].warrantyId,
+                        );
                       },
                     ),
                     if (index != visibleWarranties.length - 1)

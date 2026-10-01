@@ -3,20 +3,34 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../config/app_colors.dart';
 import '../../utils/constants.dart';
+import '../../services/warranty_service.dart';
 
 enum _EditWarrantyTab { details, documents }
 
 class EditWarrantyScreen extends StatefulWidget {
-  const EditWarrantyScreen({super.key});
+  final String warrantyId;
+
+  const EditWarrantyScreen({super.key, required this.warrantyId,});
 
   @override
   State<EditWarrantyScreen> createState() => _EditWarrantyScreenState();
 }
 
 class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
+  final WarrantyService _warrantyService = WarrantyService();
+
+  bool _isLoading = true;
+  bool _isSaving = false;
+  String? _loadError;
+  String _currentDocumentName = '';
+  String _currentDocumentType = '';
+  DateTime? _currentDocumentDate;
+
   static const _applianceTypes = [
     'Refrigerator',
     'Washing Machine',
@@ -26,24 +40,121 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
   ];
 
   final _formKey = GlobalKey<FormState>();
-  final _brandController = TextEditingController(text: 'Samsung');
-  final _modelController = TextEditingController(text: 'RT32K5032S8');
-  final _startDateController = TextEditingController(text: '12 Aug 2026');
-  final _endDateController = TextEditingController(text: '12 Aug 2028');
-  final _providerController = TextEditingController(text: 'Samsung Sri Lanka');
-  final _notesController = TextEditingController(
-    text: 'Standard manufacturer warranty.',
-  );
+  final _brandController = TextEditingController();
+  final _modelController = TextEditingController();
+  final _startDateController = TextEditingController();
+  final _endDateController = TextEditingController();
+  final _providerController = TextEditingController();
+  final _notesController = TextEditingController();
 
   _EditWarrantyTab _selectedTab = _EditWarrantyTab.details;
-  String? _applianceType = 'Refrigerator';
-  DateTime? _startDate = DateTime(2026, 8, 12);
-  DateTime? _endDate = DateTime(2028, 8, 12);
+  String? _applianceType;
+  DateTime? _startDate;
+  DateTime? _endDate;
   bool _validationAttempted = false;
   bool _isSelectingFile = false;
   PlatformFile? _replacementFile;
   Uint8List? _replacementImageBytes;
   int? _replacementFileSize;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadWarranty();
+  }
+
+  Future<void> _loadWarranty() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        if (!mounted) return;
+
+        setState(() {
+          _loadError = 'Please log in to edit this warranty.';
+          _isLoading = false;
+        });
+
+        return;
+      }
+
+      final snapshot =
+          await _warrantyService.getWarrantyOnce(widget.warrantyId);
+
+      if (!mounted) return;
+
+      if (!snapshot.exists) {
+        setState(() {
+          _loadError = 'Warranty information is unavailable.';
+          _isLoading = false;
+        });
+
+        return;
+      }
+
+      final data = snapshot.data();
+
+      if (data == null || data['userId'] != user.uid) {
+        setState(() {
+          _loadError = 'Warranty information is unavailable.';
+          _isLoading = false;
+        });
+
+        return;
+      }
+
+      final startTimestamp = data['warrantyStartDate'] as Timestamp?;
+      final endTimestamp = data['warrantyEndDate'] as Timestamp?;
+
+      final startDate = startTimestamp?.toDate();
+      final endDate = endTimestamp?.toDate();
+
+      final documentTimestamp =
+          (data['uploadedAt'] ?? data['createdAt']) as Timestamp?;
+
+      final documentDate = documentTimestamp?.toDate();
+
+      setState(() {
+        _applianceType = data['applianceType'] as String?;
+        _brandController.text =
+            (data['brand'] as String?) ?? '';
+        _modelController.text =
+            (data['model'] as String?) ?? '';
+        _providerController.text =
+            (data['provider'] as String?) ?? '';
+        _notesController.text =
+            (data['notes'] as String?) ?? '';
+        _currentDocumentName =
+            (data['documentName'] as String?) ?? '';
+
+        _currentDocumentType =
+            (data['documentType'] as String?) ?? '';
+
+        _currentDocumentDate = documentDate;
+
+        _startDate = startDate;
+        _endDate = endDate;
+
+        _startDateController.text =
+            startDate == null ? '' : _formatDate(startDate);
+
+        _endDateController.text =
+            endDate == null ? '' : _formatDate(endDate);
+
+        _isLoading = false;
+        _loadError = null;
+      });
+    } catch (e) {
+      debugPrint('Warranty load error: $e');
+
+      if (!mounted) return;
+
+      setState(() {
+        _loadError = 'Unable to load warranty information.';
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -115,20 +226,128 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _saveDetails() {
+  Future<void> _saveDetails() async {
     FocusScope.of(context).unfocus();
-    setState(() => _validationAttempted = true);
-    if (!(_formKey.currentState?.validate() ?? false)) return;
-    _showMessage('Warranty changes saved locally for preview.');
-  }
 
-  void _saveDocuments() {
-    FocusScope.of(context).unfocus();
-    if (_replacementFile == null) {
-      _showMessage('No replacement document selected.');
+    setState(() => _validationAttempted = true);
+
+    if (!(_formKey.currentState?.validate() ?? false)) {
       return;
     }
-    _showMessage('Document changes saved locally for preview.');
+
+    if (_applianceType == null ||
+        _startDate == null ||
+        _endDate == null) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      await _warrantyService.updateWarranty(
+        warrantyId: widget.warrantyId,
+        applianceType: _applianceType!,
+        brand: _brandController.text,
+        model: _modelController.text,
+        warrantyStartDate: _startDate!,
+        warrantyEndDate: _endDate!,
+        provider: _providerController.text,
+        notes: _notesController.text,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Warranty updated successfully.'),
+        ),
+      );
+
+      context.pop();
+    } catch (e) {
+      debugPrint('Warranty update error: $e');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Unable to update warranty. Please try again.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _saveDocuments() async {
+    FocusScope.of(context).unfocus();
+
+    final replacementFile = _replacementFile;
+
+    if (replacementFile == null) {
+      _showMessage('Please select a replacement document.');
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+    });
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        _showMessage('Please log in before updating the document.');
+        return;
+      }
+
+      final fileBytes = await replacementFile.readAsBytes();
+      final fileSize = _replacementFileSize ?? fileBytes.length;
+
+      await _warrantyService.uploadWarrantyDocument(
+        userId: user.uid,
+        warrantyId: widget.warrantyId,
+        fileBytes: fileBytes,
+        fileName: replacementFile.name,
+        fileSize: fileSize,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Warranty document replaced successfully.'),
+        ),
+      );
+
+      context.pop();
+    } catch (e) {
+      debugPrint('Warranty document replacement error: $e');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Unable to replace warranty document. Please try again.',
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
   }
 
   String get _replacementExtension {
@@ -194,7 +413,39 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // TODO: Load selected warranty data during backend integration.
+    if (_isLoading) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Edit Warranty'),
+        centerTitle: true,
+      ),
+      body: const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+  }
+
+  if (_loadError != null) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          onPressed: () => context.pop(),
+          icon: const Icon(Icons.arrow_back_rounded),
+        ),
+        title: const Text('Edit Warranty'),
+        centerTitle: true,
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            _loadError!,
+            textAlign: TextAlign.center,
+          ),
+        ),
+      ),
+    );
+  }
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -221,7 +472,12 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
                 ),
                 child: Column(
                   children: [
-                    const _EditSummaryCard(),
+                    _EditSummaryCard(
+                      applianceType: _applianceType ?? '',
+                      brand: _brandController.text,
+                      model: _modelController.text,
+                      endDate: _endDate,
+                    ),
                     const SizedBox(height: AppConstants.paddingMedium),
                     _EditTabs(
                       selectedTab: _selectedTab,
@@ -243,10 +499,20 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
                 border: Border(top: BorderSide(color: AppColors.border)),
               ),
               child: ElevatedButton(
-                onPressed: _selectedTab == _EditWarrantyTab.details
-                    ? _saveDetails
-                    : _saveDocuments,
-                child: const Text('Save Changes'),
+                onPressed: _isSaving
+                    ? null
+                    : (_selectedTab == _EditWarrantyTab.details
+                          ? _saveDetails
+                          : _saveDocuments),
+                child: _isSaving
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : const Text('Save Changes'),
               ),
             ),
           ],
@@ -387,7 +653,14 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
           style: Theme.of(context).textTheme.titleMedium,
         ),
         const SizedBox(height: 12),
-        _CurrentDocumentCard(onReplace: _chooseReplacement),
+        _CurrentDocumentCard(
+          documentName: _currentDocumentName,
+            documentType: _currentDocumentType,
+            addedDate: _currentDocumentDate == null
+                ? 'Date unavailable'
+                : _formatDate(_currentDocumentDate!),
+          onReplace: _chooseReplacement
+        ),
         const SizedBox(height: AppConstants.paddingLarge),
         _ReplacementArea(
           isSelecting: _isSelectingFile,
@@ -421,7 +694,7 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Your selected replacement will be applied when document storage integration is completed.',
+                  'Select a new document and tap Save Changes to replace the current warranty document.',
                   style: TextStyle(color: AppColors.textSecondary, height: 1.4),
                 ),
               ),
@@ -434,7 +707,177 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
 }
 
 class _EditSummaryCard extends StatelessWidget {
-  const _EditSummaryCard();
+  final String applianceType;
+  final String brand;
+  final String model;
+  final DateTime? endDate;
+
+  const _EditSummaryCard({
+    required this.applianceType,
+    required this.brand,
+    required this.model,
+    required this.endDate,
+  });
+
+  String _formatDate(DateTime date) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final now = DateTime.now();
+
+    final normalizedToday = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    );
+
+    final normalizedEndDate = endDate == null
+        ? null
+        : DateTime(
+            endDate!.year,
+            endDate!.month,
+            endDate!.day,
+          );
+
+    final isActive = normalizedEndDate != null &&
+        !normalizedEndDate.isBefore(normalizedToday);
+
+    final daysRemaining = normalizedEndDate == null
+        ? 0
+        : normalizedEndDate.difference(normalizedToday).inDays;
+
+    String remainingText;
+
+    if (!isActive) {
+      remainingText = 'Warranty expired';
+    } else if (daysRemaining == 0) {
+      remainingText = 'Expires today';
+    } else if (daysRemaining < 30) {
+      remainingText =
+          '$daysRemaining day${daysRemaining == 1 ? '' : 's'} remaining';
+    } else if (daysRemaining < 365) {
+      final months = (daysRemaining / 30).floor();
+      remainingText =
+          '$months month${months == 1 ? '' : 's'} remaining';
+    } else {
+      final years = (daysRemaining / 365).floor();
+      remainingText =
+          '$years year${years == 1 ? '' : 's'} remaining';
+    }
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppConstants.paddingMedium),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 82,
+              height: 104,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.kitchen_rounded,
+                size: 54,
+                color: AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '$brand $applianceType',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      height: 1.25,
+                    ),
+                  ),
+                  Text(
+                    model,
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? const Color(0xFFDCFCE7)
+                          : const Color(0xFFFFE4E6),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isActive
+                              ? Icons.check_circle_rounded
+                              : Icons.cancel_rounded,
+                          size: 15,
+                          color: isActive
+                              ? AppColors.success
+                              : AppColors.error,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          isActive ? 'Active' : 'Expired',
+                          style: TextStyle(
+                            color: isActive
+                                ? AppColors.success
+                                : AppColors.error,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    endDate == null
+                        ? 'End date unavailable'
+                        : 'Ends ${_formatDate(endDate!)}',
+                    style: theme.textTheme.bodyMedium,
+                  ),
+                  Text(
+                    remainingText,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -515,7 +958,7 @@ class _EditSummaryCard extends StatelessWidget {
       ),
     );
   }
-}
+
 
 class _EditTabs extends StatelessWidget {
   final _EditWarrantyTab selectedTab;
@@ -628,12 +1071,21 @@ class _EditField extends StatelessWidget {
 }
 
 class _CurrentDocumentCard extends StatelessWidget {
+  final String documentName;
+  final String documentType;
+  final String addedDate;
   final VoidCallback onReplace;
 
-  const _CurrentDocumentCard({required this.onReplace});
+  const _CurrentDocumentCard({
+    required this.documentName,
+    required this.documentType,
+    required this.addedDate,
+    required this.onReplace,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final isPdf = documentName.toLowerCase().endsWith('.pdf');
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
@@ -646,9 +1098,13 @@ class _CurrentDocumentCard extends StatelessWidget {
                 color: const Color(0xFFFFE4E6),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
-                Icons.picture_as_pdf_outlined,
-                color: AppColors.error,
+              child: Icon(
+                isPdf
+                    ? Icons.picture_as_pdf_outlined
+                    : Icons.image_outlined,
+                color: isPdf
+                    ? AppColors.error
+                    : AppColors.primaryBlue,
                 size: 30,
               ),
             ),
@@ -658,7 +1114,7 @@ class _CurrentDocumentCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Warranty_Certificate.pdf',
+                    documentName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -667,11 +1123,11 @@ class _CurrentDocumentCard extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    'Warranty Certificate',
+                    documentType,
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   Text(
-                    'Added on 12 Aug 2026',
+                    'Added on $addedDate',
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],

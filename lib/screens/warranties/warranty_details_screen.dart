@@ -1,7 +1,11 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_colors.dart';
+import '../../services/warranty_service.dart';
 import '../../utils/constants.dart';
 
 enum _WarrantyDetailsTab { details, documents }
@@ -9,14 +13,117 @@ enum _WarrantyDetailsTab { details, documents }
 enum _WarrantyMenuAction { edit, delete }
 
 class WarrantyDetailsScreen extends StatefulWidget {
-  const WarrantyDetailsScreen({super.key});
+  final String warrantyId;
+  
+  const WarrantyDetailsScreen({super.key, required this.warrantyId});
 
   @override
   State<WarrantyDetailsScreen> createState() => _WarrantyDetailsScreenState();
 }
 
 class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
+  final WarrantyService _warrantyService = WarrantyService();
   _WarrantyDetailsTab _selectedTab = _WarrantyDetailsTab.details;
+  bool _isDeleting = false;
+
+  String _getText(dynamic value) {
+    if (value == null) return 'Not available';
+
+    final text = value.toString().trim();
+    return text.isEmpty ? 'Not available' : text;
+  }
+
+  DateTime? _getDate(dynamic value) {
+    if (value is Timestamp) {
+      return value.toDate();
+    }
+
+    return null;
+  }
+
+  String _formatDate(DateTime? date) {
+    if (date == null) return 'Not available';
+
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
+  String _getWarrantyStatus(DateTime? endDate) {
+    if (endDate == null) return 'Not available';
+
+    final today = DateUtils.dateOnly(DateTime.now());
+    final expiryDate = DateUtils.dateOnly(endDate);
+    final daysUntilExpiry = expiryDate.difference(today).inDays;
+
+    if (daysUntilExpiry < 0) {
+      return 'Expired';
+    } else if (daysUntilExpiry <= 30) {
+      return 'Expiring Soon';
+    } else {
+      return 'Active';
+    }
+  }
+
+  String _getExpiryText(DateTime? endDate) {
+    if (endDate == null) return 'End date not available';
+
+    final today = DateUtils.dateOnly(DateTime.now());
+    final expiryDate = DateUtils.dateOnly(endDate);
+    final daysUntilExpiry = expiryDate.difference(today).inDays;
+
+    if (daysUntilExpiry < 0) {
+      return 'Ended ${_formatDate(endDate)}';
+    }
+
+    return 'Ends ${_formatDate(endDate)}';
+  }
+
+  String _getRemainingText(DateTime? endDate) {
+    if (endDate == null) return 'Remaining time unavailable';
+
+    final today = DateUtils.dateOnly(DateTime.now());
+    final expiryDate = DateUtils.dateOnly(endDate);
+    final days = expiryDate.difference(today).inDays;
+
+    if (days < 0) {
+      final expiredDays = -days;
+
+      if (expiredDays == 1) {
+        return 'Expired 1 day ago';
+      }
+
+      return 'Expired $expiredDays days ago';
+    }
+
+    if (days == 0) return 'Expires today';
+    if (days == 1) return '1 day remaining';
+
+    if (days < 60) {
+      return '$days days remaining';
+    }
+
+    if (days < 730) {
+      final months = (days / 30).floor();
+      return '$months months remaining';
+    }
+
+    final years = (days / 365).floor();
+    return years == 1 ? '1 year remaining' : '$years years remaining';
+  }
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(context)
@@ -24,7 +131,148 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _openEditWarranty() => context.push('/warranties/edit');
+  Future<void> _openDocumentPreview({
+    required String documentUrl,
+    required String documentName,
+  }) async {
+    if (documentUrl.trim().isEmpty) {
+      _showMessage('Preview is not available for this document.');
+      return;
+    }
+
+    final lowerFileName = documentName.toLowerCase();
+
+    final isImage =
+        lowerFileName.endsWith('.jpg') ||
+        lowerFileName.endsWith('.jpeg') ||
+        lowerFileName.endsWith('.png');
+
+    if (isImage) {
+      await showDialog<void>(
+        context: context,
+        builder: (dialogContext) {
+          return Dialog(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: 600,
+                maxHeight: 700,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            documentName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(dialogContext)
+                                .textTheme
+                                .titleMedium
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                          ),
+                        ),
+                        IconButton(
+                          onPressed: () =>
+                              Navigator.of(dialogContext).pop(),
+                          icon: const Icon(Icons.close_rounded),
+                          tooltip: 'Close preview',
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1),
+                  Flexible(
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      child: InteractiveViewer(
+                        minScale: 0.5,
+                        maxScale: 4,
+                        child: Image.network(
+                          documentUrl,
+                          fit: BoxFit.contain,
+                          loadingBuilder: (
+                            context,
+                            child,
+                            loadingProgress,
+                          ) {
+                            if (loadingProgress == null) {
+                              return child;
+                            }
+
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(40),
+                                child: CircularProgressIndicator(),
+                              ),
+                            );
+                          },
+                          errorBuilder: (
+                            context,
+                            error,
+                            stackTrace,
+                          ) {
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.all(32),
+                                child: Text(
+                                  'Unable to load document preview.',
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+
+      return;
+    }
+
+    final uri = Uri.tryParse(documentUrl);
+
+    if (uri == null) {
+      _showMessage('Invalid document link.');
+      return;
+    }
+
+    try {
+      final opened = await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!opened && mounted) {
+        _showMessage('Unable to open this document.');
+      }
+    } catch (e) {
+      debugPrint('Document preview error: $e');
+
+      if (mounted) {
+        _showMessage('Unable to open this document.');
+      }
+    }
+  }
+
+  void _openEditWarranty() {
+    context.push(
+      '/warranties/edit',
+      extra: widget.warrantyId,
+    );
+  } 
 
   Future<void> _showDeleteConfirmation() async {
     final shouldDelete = await showDialog<bool>(
@@ -96,9 +344,49 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
     );
 
     if (shouldDelete == true && mounted) {
-      // TODO: During backend integration, delete the selected warranty,
-      // return to the Warranty List, and show deletion success feedback.
-      _showMessage('Delete functionality will be connected later.');
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        _showMessage('Please log in before deleting a warranty.');
+        return;
+      }
+
+      if (_isDeleting) return;
+
+      setState(() {
+        _isDeleting = true;
+      });
+
+      try {
+        await _warrantyService.deleteWarranty(
+          warrantyId: widget.warrantyId,
+          userId: user.uid,
+        );
+
+        if (!mounted) return;
+
+        context.go('/warranties');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Warranty deleted successfully.'),
+          ),
+        );
+      } catch (e) {
+        debugPrint('Warranty delete error: $e');
+
+        if (!mounted) return;
+
+        _showMessage(
+          'Unable to delete warranty. Please try again.',
+        );
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isDeleting = false;
+          });
+        }
+      }
     }
   }
 
@@ -115,6 +403,16 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return const Scaffold(
+        body: Center(
+          child: Text('Please log in to view warranty details.'),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -155,7 +453,70 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
           ),
         ],
       ),
-      body: SafeArea(
+      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        stream: _warrantyService.getWarrantyById(widget.warrantyId),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
+          }
+
+          if (snapshot.hasError) {
+            return const Center(
+              child: Text('Unable to load warranty details.'),
+            );
+          }
+
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const Center(
+              child: Text('Warranty not found.'),
+            );
+          }
+
+          final data = snapshot.data!.data();
+
+          if (data == null) {
+            return const Center(
+              child: Text('Warranty information is unavailable.'),
+            );
+          }
+
+          if (data['userId'] != user.uid) {
+            return const Center(
+              child: Text('You do not have access to this warranty.'),
+            );
+          }
+
+          final applianceType = _getText(data['applianceType']);
+          final brand = _getText(data['brand']);
+          final model = _getText(data['model']);
+          final provider = _getText(data['provider']);
+          final notes = _getText(data['notes']);
+
+          final documentName = _getText(data['documentName']);
+          final documentType = _getText(data['documentType']);
+          final documentUrl = (data['documentUrl'] as String?)?.trim() ?? '';
+
+          final startDate = _getDate(data['warrantyStartDate']);
+          final endDate = _getDate(data['warrantyEndDate']);
+
+          final formattedStartDate = _formatDate(startDate);
+          final formattedEndDate = _formatDate(endDate);
+
+          final status = _getWarrantyStatus(endDate);
+          final expiryText = _getExpiryText(endDate);
+          final remainingText = _getRemainingText(endDate);
+
+          final applianceName = [
+            brand,
+            applianceType,
+          ].where((value) => value != 'Not available').join(' ');
+
+          final summaryTitle =
+              applianceName.isEmpty ? 'Warranty' : applianceName;
+
+          return SafeArea(
         top: false,
         child: Column(
           children: [
@@ -169,7 +530,13 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
                 ),
                 child: Column(
                   children: [
-                    const _WarrantySummaryCard(),
+                    _WarrantySummaryCard(
+                      appliance: summaryTitle,
+                      model: model,
+                      status: status,
+                      expiryText: expiryText,
+                      remainingText: remainingText,
+                    ),
                     const SizedBox(height: AppConstants.paddingMedium),
                     _WarrantyTabs(
                       selectedTab: _selectedTab,
@@ -181,13 +548,23 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
                     AnimatedSwitcher(
                       duration: const Duration(milliseconds: 200),
                       child: _selectedTab == _WarrantyDetailsTab.details
-                          ? const _DetailsCard(
-                              key: ValueKey('warranty-details'),
+                          ? _DetailsCard(
+                              key: const ValueKey('warranty-details'),
+                              applianceType: applianceType,
+                              brand: brand,
+                              model: model,
+                              startDate: formattedStartDate,
+                              endDate: formattedEndDate,
+                              provider: provider,
+                              notes: notes,
                             )
                           : _DocumentsCard(
                               key: const ValueKey('warranty-documents'),
-                              onPreview: () => _showMessage(
-                                'Document preview will be available after storage integration.',
+                              documentName: documentName,
+                              documentType: documentType,
+                              onPreview: () => _openDocumentPreview(
+                                documentUrl: documentUrl,
+                                documentName: documentName,
                               ),
                             ),
                     ),
@@ -201,13 +578,27 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
             ),
           ],
         ),
-      ),
-    );
+      );
+    },
+  ),
+);
   }
 }
 
 class _WarrantySummaryCard extends StatelessWidget {
-  const _WarrantySummaryCard();
+  final String appliance;
+  final String model;
+  final String status;
+  final String expiryText;
+  final String remainingText;
+
+  const _WarrantySummaryCard({
+    required this.appliance,
+    required this.model,
+    required this.status,
+    required this.expiryText,
+    required this.remainingText,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -240,26 +631,26 @@ class _WarrantySummaryCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Samsung Refrigerator',
+                    appliance,
                     style: theme.textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.w700,
                       height: 1.25,
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text('RT32K5032S8', style: theme.textTheme.bodyMedium),
+                  Text(model, style: theme.textTheme.bodyMedium),
                   const SizedBox(height: 9),
-                  const _ActiveBadge(),
+                  _StatusBadge(status: status),
                   const SizedBox(height: 9),
                   Text(
-                    'Ends 12 Aug 2028',
+                    expiryText,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: AppColors.textPrimary,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                   Text(
-                    '2 years remaining',
+                    remainingText,
                     style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
                   ),
                 ],
@@ -272,26 +663,66 @@ class _WarrantySummaryCard extends StatelessWidget {
   }
 }
 
-class _ActiveBadge extends StatelessWidget {
-  const _ActiveBadge();
+class _StatusBadge extends StatelessWidget {
+  final String status;
+
+  const _StatusBadge({
+    required this.status,
+  });
 
   @override
   Widget build(BuildContext context) {
+    late final Color textColor;
+    late final Color backgroundColor;
+    late final IconData icon;
+
+    switch (status) {
+      case 'Expired':
+        textColor = AppColors.error;
+        backgroundColor = const Color(0xFFFFE4E6);
+        icon = Icons.cancel_rounded;
+        break;
+
+      case 'Expiring Soon':
+        textColor = const Color(0xFFD97706);
+        backgroundColor = const Color(0xFFFFF7ED);
+        icon = Icons.warning_amber_rounded;
+        break;
+
+      case 'Active':
+        textColor = AppColors.success;
+        backgroundColor = const Color(0xFFDCFCE7);
+        icon = Icons.check_circle_rounded;
+        break;
+
+      default:
+        textColor = AppColors.textSecondary;
+        backgroundColor = const Color(0xFFF1F5F9);
+        icon = Icons.info_outline_rounded;
+    }
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 9,
+        vertical: 4,
+      ),
       decoration: BoxDecoration(
-        color: const Color(0xFFDCFCE7),
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(20),
       ),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.check_circle_rounded, size: 15, color: AppColors.success),
-          SizedBox(width: 4),
+          Icon(
+            icon,
+            size: 15,
+            color: textColor,
+          ),
+          const SizedBox(width: 4),
           Text(
-            'Active',
+            status,
             style: TextStyle(
-              color: AppColors.success,
+              color: textColor,
               fontSize: 12,
               fontWeight: FontWeight.w700,
             ),
@@ -370,20 +801,37 @@ class _TabButton extends StatelessWidget {
 }
 
 class _DetailsCard extends StatelessWidget {
-  const _DetailsCard({super.key});
+  final String applianceType;
+  final String brand;
+  final String model;
+  final String startDate;
+  final String endDate;
+  final String provider;
+  final String notes;
 
-  static const _items = [
-    (Icons.kitchen_outlined, 'Appliance Type', 'Refrigerator'),
-    (Icons.sell_outlined, 'Brand', 'Samsung'),
-    (Icons.inventory_2_outlined, 'Model', 'RT32K5032S8'),
-    (Icons.calendar_today_outlined, 'Warranty Start Date', '12 Aug 2026'),
-    (Icons.event_available_outlined, 'Warranty End Date', '12 Aug 2028'),
-    (Icons.business_outlined, 'Provider / Company', 'Samsung Sri Lanka'),
-    (Icons.description_outlined, 'Notes', 'Standard manufacturer warranty.'),
-  ];
+  const _DetailsCard({
+    super.key,
+    required this.applianceType,
+    required this.brand,
+    required this.model,
+    required this.startDate,
+    required this.endDate,
+    required this.provider,
+    required this.notes,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final items = [
+      (Icons.kitchen_outlined, 'Appliance Type', applianceType),
+      (Icons.sell_outlined, 'Brand', brand),
+      (Icons.inventory_2_outlined, 'Model', model),
+      (Icons.calendar_today_outlined, 'Warranty Start Date', startDate),
+      (Icons.event_available_outlined, 'Warranty End Date', endDate),
+      (Icons.business_outlined, 'Provider / Company', provider),
+      (Icons.description_outlined, 'Notes', notes),
+    ];
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(
@@ -392,13 +840,13 @@ class _DetailsCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            for (var index = 0; index < _items.length; index++) ...[
+            for (var index = 0; index < items.length; index++) ...[
               _DetailRow(
-                icon: _items[index].$1,
-                label: _items[index].$2,
-                value: _items[index].$3,
+                icon: items[index].$1,
+                label: items[index].$2,
+                value: items[index].$3,
               ),
-              if (index != _items.length - 1)
+              if (index != items.length - 1)
                 const Divider(height: 1, indent: 52),
             ],
           ],
@@ -466,13 +914,18 @@ class _DetailRow extends StatelessWidget {
 }
 
 class _DocumentsCard extends StatelessWidget {
+  final String documentName;
+  final String documentType;
   final VoidCallback onPreview;
 
-  const _DocumentsCard({super.key, required this.onPreview});
+  const _DocumentsCard({super.key, required this.onPreview, required this.documentName, required this.documentType});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    final lowerFileName = documentName.toLowerCase();
+    final isPdf = lowerFileName.endsWith('.pdf');
 
     return Card(
       child: Padding(
@@ -484,14 +937,20 @@ class _DocumentsCard extends StatelessWidget {
               width: 52,
               height: 60,
               decoration: BoxDecoration(
-                color: const Color(0xFFFFF1F2),
+                color: isPdf
+                    ? const Color(0xFFFFF1F2)
+                    : const Color(0xFFEFF6FF),
                 borderRadius: BorderRadius.circular(
                   AppConstants.borderRadiusMedium,
                 ),
               ),
-              child: const Icon(
-                Icons.picture_as_pdf_outlined,
-                color: AppColors.error,
+              child: Icon(
+                isPdf
+                    ? Icons.picture_as_pdf_outlined
+                    : Icons.image_outlined,
+                color: isPdf
+                    ? AppColors.error
+                    : AppColors.primaryBlue,
                 size: 28,
               ),
             ),
@@ -501,7 +960,7 @@ class _DocumentsCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Warranty_Certificate.pdf',
+                    documentName,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(
@@ -511,7 +970,7 @@ class _DocumentsCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    'Warranty Certificate · PDF',
+                    documentType,
                     style: theme.textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 8),

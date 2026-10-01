@@ -1,10 +1,14 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../config/app_colors.dart';
+import '../../services/warranty_service.dart';
 import '../../utils/constants.dart';
 
 class _ExpiringWarranty {
+  final String warrantyId;
   final String appliance;
   final String model;
   final DateTime endDate;
@@ -12,6 +16,7 @@ class _ExpiringWarranty {
   final IconData icon;
 
   const _ExpiringWarranty({
+    required this.warrantyId,
     required this.appliance,
     required this.model,
     required this.endDate,
@@ -23,34 +28,112 @@ class _ExpiringWarranty {
 class WarrantyExpiryScreen extends StatelessWidget {
   const WarrantyExpiryScreen({super.key});
 
-  // TODO: Derive expiring warranties from real warrantyEndDate values during
-  // backend integration. Expiring Soon means 0–30 days remaining.
-  static final List<_ExpiringWarranty> _warranties = [
-    _ExpiringWarranty(
-      appliance: 'LG Washing Machine',
-      model: 'FHT1207SWS',
-      endDate: DateTime(2026, 10, 5),
-      timing: '7 days left',
-      icon: Icons.local_laundry_service_outlined,
-    ),
-    _ExpiringWarranty(
-      appliance: 'Microwave Oven',
-      model: 'MS23K3513AS',
-      endDate: DateTime(2026, 10, 16),
-      timing: '18 days left',
-      icon: Icons.microwave_outlined,
-    ),
-    _ExpiringWarranty(
-      appliance: 'Electric Kettle',
-      model: 'HD9316',
-      endDate: DateTime(2026, 10, 27),
-      timing: '29 days left',
-      icon: Icons.coffee_maker_outlined,
-    ),
-  ];
+  IconData _getApplianceIcon(String applianceType) {
+    final type = applianceType.toLowerCase();
+
+    if (type.contains('washing')) {
+      return Icons.local_laundry_service_outlined;
+    }
+
+    if (type.contains('microwave')) {
+      return Icons.microwave_outlined;
+    }
+
+    if (type.contains('kettle')) {
+      return Icons.coffee_maker_outlined;
+    }
+
+    if (type.contains('refrigerator') || type.contains('fridge')) {
+      return Icons.kitchen_outlined;
+    }
+
+    return Icons.home_outlined;
+  }
+
+  List<_ExpiringWarranty> _convertWarranties(
+    QuerySnapshot<Map<String, dynamic>> snapshot,
+  ) {
+    final today = DateUtils.dateOnly(DateTime.now());
+    final warranties = <_ExpiringWarranty>[];
+
+    for (final document in snapshot.docs) {
+      final data = document.data();
+
+      final endDateValue = data['warrantyEndDate'];
+
+      if (endDateValue is! Timestamp) {
+        continue;
+      }
+
+      final endDate = DateUtils.dateOnly(endDateValue.toDate());
+      final daysRemaining = endDate.difference(today).inDays;
+
+      // Expiring Soon = today through the next 30 days.
+      if (daysRemaining < 0 || daysRemaining > 30) {
+        continue;
+      }
+
+      final applianceType =
+          data['applianceType']?.toString().trim() ?? '';
+
+      final brand =
+          data['brand']?.toString().trim() ?? '';
+
+      final model =
+          data['model']?.toString().trim() ?? '';
+
+      final applianceParts = <String>[
+        if (brand.isNotEmpty) brand,
+        if (applianceType.isNotEmpty) applianceType,
+      ];
+
+      final appliance = applianceParts.isEmpty
+          ? 'Warranty'
+          : applianceParts.join(' ');
+
+      String timing;
+
+      if (daysRemaining == 0) {
+        timing = 'Expires today';
+      } else if (daysRemaining == 1) {
+        timing = '1 day left';
+      } else {
+        timing = '$daysRemaining days left';
+      }
+
+      warranties.add(
+        _ExpiringWarranty(
+          warrantyId: document.id,
+          appliance: appliance,
+          model: model.isEmpty ? 'Model not available' : model,
+          endDate: endDate,
+          timing: timing,
+          icon: _getApplianceIcon(applianceType),
+        ),
+      );
+    }
+
+    warranties.sort(
+      (a, b) => a.endDate.compareTo(b.endDate),
+    );
+
+    return warranties;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return const Scaffold(
+        body: Center(
+          child: Text('Please log in to view warranty expiry information.'),
+        ),
+      );
+    }
+
+    final warrantyService = WarrantyService();
+
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -66,30 +149,64 @@ class WarrantyExpiryScreen extends StatelessWidget {
       ),
       body: SafeArea(
         top: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(
-            AppConstants.paddingMedium,
-            AppConstants.paddingSmall,
-            AppConstants.paddingMedium,
-            AppConstants.paddingLarge,
-          ),
-          children: [
-            _ExpirySummaryBanner(count: _warranties.length),
-            const SizedBox(height: AppConstants.paddingMedium),
-            if (_warranties.isEmpty)
-              const _EmptyExpiryState()
-            else
-              for (var index = 0; index < _warranties.length; index++) ...[
-                _ExpiryWarrantyCard(
-                  warranty: _warranties[index],
-                  onTap: () {
-                    // TODO: Pass selected real warranty during backend integration.
-                    context.push('/warranties/details');
-                  },
+        child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+          stream: warrantyService.getUserWarranties(user.uid),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(
+                child: CircularProgressIndicator(),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return const Center(
+                child: Text('Unable to load warranty expiry information.'),
+              );
+            }
+
+            if (!snapshot.hasData) {
+              return const _EmptyExpiryState();
+            }
+
+            final warranties = _convertWarranties(snapshot.data!);
+
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(
+                AppConstants.paddingMedium,
+                AppConstants.paddingSmall,
+                AppConstants.paddingMedium,
+                AppConstants.paddingLarge,
+              ),
+              children: [
+                _ExpirySummaryBanner(
+                  count: warranties.length,
                 ),
-                if (index != _warranties.length - 1) const SizedBox(height: 12),
+                const SizedBox(
+                  height: AppConstants.paddingMedium,
+                ),
+                if (warranties.isEmpty)
+                  const _EmptyExpiryState()
+                else
+                  for (
+                    var index = 0;
+                    index < warranties.length;
+                    index++
+                  ) ...[
+                    _ExpiryWarrantyCard(
+                      warranty: warranties[index],
+                      onTap: () {
+                        context.push(
+                          '/warranties/details',
+                          extra: warranties[index].warrantyId,
+                        );
+                      },
+                    ),
+                    if (index != warranties.length - 1)
+                      const SizedBox(height: 12),
+                  ],
               ],
-          ],
+            );
+          },
         ),
       ),
     );
@@ -104,12 +221,17 @@ class _ExpirySummaryBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return Container(
       padding: const EdgeInsets.all(AppConstants.paddingMedium),
       decoration: BoxDecoration(
         color: const Color(0xFFFFF7ED),
-        borderRadius: BorderRadius.circular(AppConstants.borderRadiusLarge),
-        border: Border.all(color: const Color(0xFFFED7AA)),
+        borderRadius: BorderRadius.circular(
+          AppConstants.borderRadiusLarge,
+        ),
+        border: Border.all(
+          color: const Color(0xFFFED7AA),
+        ),
       ),
       child: Row(
         children: [
@@ -156,7 +278,10 @@ class _ExpiryWarrantyCard extends StatelessWidget {
   final _ExpiringWarranty warranty;
   final VoidCallback onTap;
 
-  const _ExpiryWarrantyCard({required this.warranty, required this.onTap});
+  const _ExpiryWarrantyCard({
+    required this.warranty,
+    required this.onTap,
+  });
 
   String _formatDate(DateTime date) {
     const months = [
@@ -173,16 +298,20 @@ class _ExpiryWarrantyCard extends StatelessWidget {
       'Nov',
       'Dec',
     ];
+
     return '${date.day} ${months[date.month - 1]} ${date.year}';
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return Card(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(AppConstants.borderRadiusLarge),
+        borderRadius: BorderRadius.circular(
+          AppConstants.borderRadiusLarge,
+        ),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -216,7 +345,10 @@ class _ExpiryWarrantyCard extends StatelessWidget {
                         height: 1.25,
                       ),
                     ),
-                    Text(warranty.model, style: theme.textTheme.bodyMedium),
+                    Text(
+                      warranty.model,
+                      style: theme.textTheme.bodyMedium,
+                    ),
                     const SizedBox(height: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -239,7 +371,9 @@ class _ExpiryWarrantyCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       'Ends ${_formatDate(warranty.endDate)}',
-                      style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontSize: 12,
+                      ),
                     ),
                   ],
                 ),
