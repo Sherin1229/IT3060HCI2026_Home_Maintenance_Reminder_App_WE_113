@@ -24,6 +24,7 @@ class WarrantyDetailsScreen extends StatefulWidget {
 class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
   final WarrantyService _warrantyService = WarrantyService();
   _WarrantyDetailsTab _selectedTab = _WarrantyDetailsTab.details;
+  bool _isDeleting = false;
 
   String _getText(dynamic value) {
     if (value == null) return 'Not available';
@@ -343,9 +344,49 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
     );
 
     if (shouldDelete == true && mounted) {
-      // TODO: During backend integration, delete the selected warranty,
-      // return to the Warranty List, and show deletion success feedback.
-      _showMessage('Delete functionality will be connected later.');
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user == null) {
+        _showMessage('Please log in before deleting a warranty.');
+        return;
+      }
+
+      if (_isDeleting) return;
+
+      setState(() {
+        _isDeleting = true;
+      });
+
+      try {
+        await _warrantyService.deleteWarranty(
+          warrantyId: widget.warrantyId,
+          userId: user.uid,
+        );
+
+        if (!mounted) return;
+
+        context.go('/warranties');
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Warranty deleted successfully.'),
+          ),
+        );
+      } catch (e) {
+        debugPrint('Warranty delete error: $e');
+
+        if (!mounted) return;
+
+        _showMessage(
+          'Unable to delete warranty. Please try again.',
+        );
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isDeleting = false;
+          });
+        }
+      }
     }
   }
 
