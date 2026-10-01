@@ -144,4 +144,24 @@ class WarrantyService {
       'updatedAt': FieldValue.serverTimestamp(),
     });
   }
+
+  Future<void> deleteWarranty({
+    required String warrantyId,
+    required String userId,
+  }) async {
+    final document =
+        await _firestore.collection('warranties').doc(warrantyId).get();
+
+    if (!document.exists) {
+      throw Exception('Warranty not found.');
+    }
+
+    final data = document.data();
+
+    if (data == null || data['userId'] != userId) {
+      throw Exception('You are not allowed to delete this warranty.');
+    }
+
+    await _firestore.collection('warranties').doc(warrantyId).delete();
+  }
 }
