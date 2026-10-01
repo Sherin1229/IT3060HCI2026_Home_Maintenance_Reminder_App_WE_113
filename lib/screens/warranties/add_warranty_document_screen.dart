@@ -24,26 +24,20 @@ class AddWarrantyDocumentScreen extends StatefulWidget {
 class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
   final WarrantyService _warrantyService = WarrantyService();
   bool _isSaving = false;
-  static const _documentTypes = [
-    'Warranty Card',
-    'Purchase Receipt',
-    'Invoice',
-    'Service Agreement',
-    'Other',
-  ];
 
   final _formKey = GlobalKey<FormState>();
+  final _documentTypeController = TextEditingController();
   final _notesController = TextEditingController();
 
   PlatformFile? _selectedFile;
   Uint8List? _selectedImageBytes;
   int? _selectedFileSize;
-  String? _documentType;
   bool _showFileError = false;
   bool _isSelectingFile = false;
 
   @override
   void dispose() {
+    _documentTypeController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -211,7 +205,7 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
         warrantyEndDate: widget.draft.warrantyEndDate,
         provider: widget.draft.provider,
         notes: widget.draft.notes,
-        documentType: _documentType!,
+        documentType: _documentTypeController.text.trim(),
         documentName: selectedFile.name,
       );
 
@@ -305,23 +299,18 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
                 icon: Icons.description_outlined,
                 label: 'Document Type',
                 isRequired: true,
-                child: DropdownButtonFormField<String>(
-                  initialValue: _documentType,
-                  isExpanded: true,
-                  hint: const Text('Select document type'),
-                  items: _documentTypes
-                      .map(
-                        (type) => DropdownMenuItem(
-                          value: type,
-                          child: Text(type, overflow: TextOverflow.ellipsis),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() => _documentType = value);
+                child: TextFormField(
+                  controller: _documentTypeController,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter document type',
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a document type.';
+                    }
+                    return null;
                   },
-                  validator: (value) =>
-                      value == null ? 'Please select a document type.' : null,
                 ),
               ),
               const SizedBox(height: AppConstants.paddingMedium),
