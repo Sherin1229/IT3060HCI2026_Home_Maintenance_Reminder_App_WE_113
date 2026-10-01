@@ -86,11 +86,13 @@ class WarrantyService {
     }
 
     await _firestore.collection('warranties').doc(warrantyId).update({
+      'documentName': fileName,
       'documentUrl': secureUrl,
       'documentPublicId': publicId,
       'documentResourceType': resourceType,
       'documentSize': fileSize,
       'uploadedAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
     });
   }
 
@@ -110,5 +112,36 @@ class WarrantyService {
         .collection('warranties')
         .doc(warrantyId)
         .snapshots();
+  }
+
+  Future<DocumentSnapshot<Map<String, dynamic>>> getWarrantyOnce(
+    String warrantyId,
+  ) {
+    return _firestore
+        .collection('warranties')
+        .doc(warrantyId)
+        .get();
+  }
+
+  Future<void> updateWarranty({
+    required String warrantyId,
+    required String applianceType,
+    required String brand,
+    required String model,
+    required DateTime warrantyStartDate,
+    required DateTime warrantyEndDate,
+    required String provider,
+    required String notes,
+  }) async {
+    await _firestore.collection('warranties').doc(warrantyId).update({
+      'applianceType': applianceType.trim(),
+      'brand': brand.trim(),
+      'model': model.trim(),
+      'warrantyStartDate': Timestamp.fromDate(warrantyStartDate),
+      'warrantyEndDate': Timestamp.fromDate(warrantyEndDate),
+      'provider': provider.trim(),
+      'notes': notes.trim(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
   }
 }

@@ -266,7 +266,12 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
     }
   }
 
-  void _openEditWarranty() => context.push('/warranties/edit');
+  void _openEditWarranty() {
+    context.push(
+      '/warranties/edit',
+      extra: widget.warrantyId,
+    );
+  } 
 
   Future<void> _showDeleteConfirmation() async {
     final shouldDelete = await showDialog<bool>(
