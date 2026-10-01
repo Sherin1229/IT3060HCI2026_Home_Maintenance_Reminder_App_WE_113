@@ -29,6 +29,8 @@ import '../screens/maintenance_history/maintenance_models.dart';
 import '../screens/maintenance_history/maintenance_overview_screen.dart';
 import '../screens/maintenance_history/maintenance_record_details_screen.dart';
 import '../screens/profile/profile_screen.dart';
+import '../screens/notifications/notifications_screen.dart';
+import '../screens/notifications/notification_settings_screen.dart';
 
 /// Centralized Router for HomiQ
 /// Defines routing hierarchy using GoRouter.
@@ -132,12 +134,40 @@ class AppRouter {
       GoRoute(
         path: '/warranties/details',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const WarrantyDetailsScreen(),
+        builder: (context, state) {
+          final warrantyId = state.extra;
+
+          if (warrantyId is! String || warrantyId.isEmpty) {
+            return const Scaffold(
+              body: Center(
+                child: Text('Warranty information is unavailable.'),
+              ),
+            );
+          }
+
+          return WarrantyDetailsScreen(
+            warrantyId: warrantyId,
+          );
+        },
       ),
       GoRoute(
         path: '/warranties/edit',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const EditWarrantyScreen(),
+        builder: (context, state) {
+          final warrantyId = state.extra;
+
+          if (warrantyId is! String || warrantyId.isEmpty) {
+            return const Scaffold(
+              body: Center(
+                child: Text('Warranty information is unavailable.'),
+              ),
+            );
+          }
+
+          return EditWarrantyScreen(
+            warrantyId: warrantyId,
+          );
+        },
       ),
       GoRoute(
         path: '/warranties/expiry',
@@ -162,6 +192,16 @@ class AppRouter {
         path: '/reminders/edit',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const EditReminderScreen(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: '/notifications/settings',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const NotificationSettingsScreen(),
       ),
       GoRoute(
         path: '/appliances/add',
