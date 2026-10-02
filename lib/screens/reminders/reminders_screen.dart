@@ -7,7 +7,6 @@ import '../../config/app_colors.dart';
 import '../../models/reminder_model.dart';
 import '../../providers/reminder_provider.dart';
 import '../../utils/constants.dart';
-import '../../widgets/app_logo.dart';
 import 'widgets/reminder_card.dart';
 
 enum _ReminderFilter { all, upcoming, overdue }
@@ -23,6 +22,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
   _ReminderFilter _selectedFilter = _ReminderFilter.all;
 
   String _getStatus(ReminderModel reminder) {
+    if (reminder.isCompleted) return 'Completed';
     final today = DateUtils.dateOnly(DateTime.now());
     final reminderDate = DateUtils.dateOnly(reminder.date);
 
@@ -34,6 +34,7 @@ class _RemindersScreenState extends State<RemindersScreen> {
   }
 
   String _getTiming(ReminderModel reminder) {
+    if (reminder.isCompleted) return 'Completed';
     final today = DateUtils.dateOnly(DateTime.now());
     final reminderDate = DateUtils.dateOnly(reminder.date);
 
@@ -144,30 +145,6 @@ class _RemindersScreenState extends State<RemindersScreen> {
                 96,
               ),
               children: [
-                Row(
-                  children: [
-                    const AppLogo(height: 48, width: 48),
-                    const SizedBox(width: 10),
-                    Text(
-                      'HomiQ',
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: AppColors.primaryDark,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    CircleAvatar(
-                      radius: 19,
-                      backgroundColor: const Color(0xFFDBEAFE),
-                      child: const Icon(
-                        Icons.person_outline_rounded,
-                        color: AppColors.primaryBlue,
-                        size: 22,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 28),
                 Text('Reminders', style: theme.textTheme.headlineMedium),
                 const SizedBox(height: 4),
                 Text(
@@ -248,8 +225,10 @@ class _RemindersScreenState extends State<RemindersScreen> {
                       timing: _getTiming(visibleReminders[index]),
                       applianceIcon: _getIcon(visibleReminders[index].category),
                       onTap: () {
-                        // TODO: Pass the selected real reminder during backend integration.
-                        context.push('/reminders/details');
+                        context.push(
+                          '/reminders/details',
+                          extra: visibleReminders[index].id,
+                        );
                       },
                     ),
                     if (index != visibleReminders.length - 1)

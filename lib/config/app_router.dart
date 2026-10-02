@@ -134,12 +134,32 @@ class AppRouter {
       GoRoute(
         path: '/warranties/details',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const WarrantyDetailsScreen(),
+        builder: (context, state) {
+          final warrantyId = state.extra;
+
+          if (warrantyId is! String || warrantyId.isEmpty) {
+            return const Scaffold(
+              body: Center(child: Text('Warranty information is unavailable.')),
+            );
+          }
+
+          return WarrantyDetailsScreen(warrantyId: warrantyId);
+        },
       ),
       GoRoute(
         path: '/warranties/edit',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const EditWarrantyScreen(),
+        builder: (context, state) {
+          final warrantyId = state.extra;
+
+          if (warrantyId is! String || warrantyId.isEmpty) {
+            return const Scaffold(
+              body: Center(child: Text('Warranty information is unavailable.')),
+            );
+          }
+
+          return EditWarrantyScreen(warrantyId: warrantyId);
+        },
       ),
       GoRoute(
         path: '/warranties/expiry',
@@ -149,7 +169,15 @@ class AppRouter {
       GoRoute(
         path: '/reminders/details',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const ReminderDetailsScreen(),
+        builder: (context, state) {
+          final reminderId = state.extra;
+          if (reminderId is! String || reminderId.isEmpty) {
+            return const Scaffold(
+              body: Center(child: Text('Reminder information is unavailable.')),
+            );
+          }
+          return ReminderDetailsScreen(reminderId: reminderId);
+        },
       ),
       GoRoute(
         path: '/reminders/schedule',
@@ -163,7 +191,15 @@ class AppRouter {
       GoRoute(
         path: '/reminders/edit',
         parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const EditReminderScreen(),
+        builder: (context, state) {
+          final reminderId = state.extra;
+          if (reminderId is! String || reminderId.isEmpty) {
+            return const Scaffold(
+              body: Center(child: Text('Reminder information is unavailable.')),
+            );
+          }
+          return EditReminderScreen(reminderId: reminderId);
+        },
       ),
       GoRoute(
         path: '/notifications',
