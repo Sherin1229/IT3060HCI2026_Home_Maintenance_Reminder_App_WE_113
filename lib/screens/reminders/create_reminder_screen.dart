@@ -34,46 +34,17 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
   final _titleController = TextEditingController();
   final _locationController = TextEditingController();
   final _notesController = TextEditingController();
-  final _dateController = TextEditingController();
-  final _timeController = TextEditingController();
   String? _selectedCategory;
-  DateTime? _selectedDate;
-  TimeOfDay? _selectedTime;
   ReminderScheduleSelection? _schedule;
+  bool _hasAttemptedSubmit = false;
+  bool _showScheduleError = false;
 
   @override
   void dispose() {
     _titleController.dispose();
     _locationController.dispose();
     _notesController.dispose();
-    _dateController.dispose();
-    _timeController.dispose();
     super.dispose();
-  }
-
-  Future<void> _pickDate() async {
-    final today = DateUtils.dateOnly(DateTime.now());
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate ?? today,
-      firstDate: today,
-      lastDate: DateTime(today.year + 100, 12, 31),
-    );
-    if (!mounted || date == null) return;
-    _selectedDate = date;
-    _dateController.text = MaterialLocalizations.of(
-      context,
-    ).formatMediumDate(date);
-  }
-
-  Future<void> _pickTime() async {
-    final time = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime ?? TimeOfDay.now(),
-    );
-    if (!mounted || time == null) return;
-    _selectedTime = time;
-    _timeController.text = time.format(context);
   }
 
   Future<void> _openSchedule() async {
@@ -81,12 +52,17 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
       '/reminders/schedule',
       extra: _schedule,
     );
-    if (schedule != null && mounted) setState(() => _schedule = schedule);
+    if (schedule != null && mounted) {
+      setState(() {
+        _schedule = schedule;
+        _showScheduleError = false;
+      });
+    }
   }
 
   String _scheduleSummary(BuildContext context) {
     final schedule = _schedule;
-    if (schedule == null) return 'Set frequency and date';
+    if (schedule == null) return 'Set frequency, date and time';
     final date = MaterialLocalizations.of(
       context,
     ).formatMediumDate(schedule.date);
@@ -96,7 +72,22 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
   Future<void> _saveReminder() async {
     FocusScope.of(context).unfocus();
 
-    if (!_formKey.currentState!.validate()) return;
+    final schedule = _schedule;
+    setState(() {
+      _hasAttemptedSubmit = true;
+      _showScheduleError = schedule == null;
+    });
+
+    final isFormValid = _formKey.currentState?.validate() ?? false;
+    if (schedule == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please set a reminder schedule.')),
+      );
+    }
+
+    if (!isFormValid || schedule == null) {
+      return;
+    }
 
     final user = FirebaseAuth.instance.currentUser;
 
@@ -115,11 +106,13 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
       title: _titleController.text.trim(),
       category: _selectedCategory!,
       location: _locationController.text.trim(),
-      date: _selectedDate!,
-      time: _selectedTime != null ? _timeController.text : null,
+      date: schedule.date,
+      time: schedule.time.format(context),
+      frequency: schedule.frequency,
       notes: _notesController.text.trim().isEmpty
           ? null
           : _notesController.text.trim(),
+      isCompleted: false,
       createdAt: DateTime.now(),
     );
 
@@ -192,7 +185,9 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
           padding: const EdgeInsets.all(AppConstants.paddingLarge),
           child: Form(
             key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
+            autovalidateMode: _hasAttemptedSubmit
+                ? AutovalidateMode.onUserInteraction
+                : AutovalidateMode.disabled,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -247,37 +242,20 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                     ),
                   ),
                 ),
-                _field(
-                  label: 'Date *',
-                  child: TextFormField(
-                    controller: _dateController,
-                    readOnly: true,
-                    onTap: _pickDate,
-                    decoration: const InputDecoration(
-                      hintText: 'Select date',
-                      suffixIcon: Icon(Icons.calendar_today_outlined),
-                    ),
-                    validator: (_) =>
-                        _selectedDate == null ? 'Please select a date.' : null,
-                  ),
-                ),
-                _field(
-                  label: 'Time',
-                  child: TextFormField(
-                    controller: _timeController,
-                    readOnly: true,
-                    onTap: _pickTime,
-                    decoration: const InputDecoration(
-                      hintText: 'Select time (optional)',
-                      suffixIcon: Icon(Icons.access_time_rounded),
-                    ),
-                  ),
-                ),
                 ReminderScheduleCard(
                   summary: _scheduleSummary(context),
                   isConfigured: _schedule != null,
                   onTap: _openSchedule,
                 ),
+                if (_showScheduleError) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Please set a reminder schedule.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppColors.error),
+                  ),
+                ],
                 const SizedBox(height: AppConstants.paddingMedium),
                 _field(
                   label: 'Notes',

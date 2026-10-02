@@ -1,20 +1,27 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../config/app_colors.dart';
+import '../../models/reminder_model.dart';
+import '../../providers/reminder_provider.dart';
 import '../../utils/constants.dart';
 
 enum _ReminderMenuAction { edit, delete }
 
 class ReminderDetailsScreen extends StatefulWidget {
-  const ReminderDetailsScreen({super.key});
+  final String reminderId;
+
+  const ReminderDetailsScreen({super.key, required this.reminderId});
 
   @override
   State<ReminderDetailsScreen> createState() => _ReminderDetailsScreenState();
 }
 
 class _ReminderDetailsScreenState extends State<ReminderDetailsScreen> {
-  bool _isCompleted = false;
+  bool _isCompleting = false;
+  bool _isDeleting = false;
 
   void _showMessage(String message) {
     ScaffoldMessenger.of(context)
@@ -22,10 +29,12 @@ class _ReminderDetailsScreenState extends State<ReminderDetailsScreen> {
       ..showSnackBar(SnackBar(content: Text(message)));
   }
 
-  void _openEditReminder() => context.push('/reminders/edit');
+  void _openEditReminder() {
+    context.push('/reminders/edit', extra: widget.reminderId);
+  }
 
-  Future<void> _confirmCompletion() async {
-    if (_isCompleted) return;
+  Future<void> _confirmCompletion(ReminderModel reminder) async {
+    if (reminder.isCompleted || _isCompleting) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -45,13 +54,29 @@ class _ReminderDetailsScreenState extends State<ReminderDetailsScreen> {
         ],
       ),
     );
-    if (confirmed == true && mounted) {
-      setState(() => _isCompleted = true);
-      _showMessage('Reminder marked as completed locally for preview.');
+    if (confirmed != true || !mounted) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _showMessage('You must be logged in to update this reminder.');
+      return;
     }
+    setState(() => _isCompleting = true);
+    final provider = context.read<ReminderProvider>();
+    final success = await provider.markReminderCompleted(
+      widget.reminderId,
+      user.uid,
+    );
+    if (!mounted) return;
+    setState(() => _isCompleting = false);
+    _showMessage(
+      success
+          ? 'Reminder marked as completed.'
+          : provider.errorMessage ?? 'Unable to update reminder.',
+    );
   }
 
   Future<void> _confirmDelete() async {
+    if (_isDeleting) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => Dialog(
@@ -92,14 +117,13 @@ class _ReminderDetailsScreenState extends State<ReminderDetailsScreen> {
                 const SizedBox(height: AppConstants.paddingLarge),
                 SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton.icon(
+                  child: ElevatedButton(
                     onPressed: () => Navigator.of(dialogContext).pop(true),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.error,
                       foregroundColor: AppColors.surface,
                     ),
-                    icon: const Icon(Icons.delete_outline_rounded),
-                    label: const Text('Delete'),
+                    child: const Text('Delete'),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -107,10 +131,6 @@ class _ReminderDetailsScreenState extends State<ReminderDetailsScreen> {
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: () => Navigator.of(dialogContext).pop(false),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primaryBlue,
-                      side: const BorderSide(color: AppColors.primaryBlue),
-                    ),
                     child: const Text('Cancel'),
                   ),
                 ),
@@ -120,26 +140,36 @@ class _ReminderDetailsScreenState extends State<ReminderDetailsScreen> {
         ),
       ),
     );
-    if (confirmed == true && mounted) {
-      // TODO: During backend integration, delete the selected reminder,
-      // return to Reminder List, and show success feedback.
-      _showMessage('Delete functionality will be connected later.');
+    if (confirmed != true || !mounted) return;
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _showMessage('You must be logged in to delete this reminder.');
+      return;
+    }
+    setState(() => _isDeleting = true);
+    final provider = context.read<ReminderProvider>();
+    final success = await provider.deleteReminder(widget.reminderId, user.uid);
+    if (!mounted) return;
+    if (success) {
+      _showMessage('Reminder deleted successfully.');
+      context.go('/reminders');
+    } else {
+      setState(() => _isDeleting = false);
+      _showMessage(provider.errorMessage ?? 'Unable to delete reminder.');
     }
   }
 
   void _handleMenu(_ReminderMenuAction action) {
-    switch (action) {
-      case _ReminderMenuAction.edit:
-        _openEditReminder();
-        return;
-      case _ReminderMenuAction.delete:
-        _confirmDelete();
-        return;
+    if (action == _ReminderMenuAction.edit) {
+      _openEditReminder();
+    } else {
+      _confirmDelete();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -180,64 +210,127 @@ class _ReminderDetailsScreenState extends State<ReminderDetailsScreen> {
           ),
         ],
       ),
-      body: SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                children: [
-                  _SummaryCard(isCompleted: _isCompleted),
-                  const SizedBox(height: AppConstants.paddingMedium),
-                  Text(
-                    'Description',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(AppConstants.paddingMedium),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      'Professional AC service and filter cleaning to maintain cooling efficiency.',
-                      style: TextStyle(height: 1.5),
-                    ),
-                  ),
-                  const SizedBox(height: AppConstants.paddingLarge),
-                  Text(
-                    'Details',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 8),
-                  const _ReminderDetailsCard(),
-                ],
+      body: user == null
+          ? const Center(child: Text('Please log in to view this reminder.'))
+          : StreamBuilder<ReminderModel?>(
+              stream: context.read<ReminderProvider>().getReminderById(
+                widget.reminderId,
+                user.uid,
               ),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return const Center(child: Text('Unable to load reminder.'));
+                }
+                final reminder = snapshot.data;
+                if (reminder == null) {
+                  return const Center(
+                    child: Text('Reminder information is unavailable.'),
+                  );
+                }
+                return _DetailsBody(
+                  reminder: reminder,
+                  isBusy: _isCompleting || _isDeleting,
+                  onComplete: () => _confirmCompletion(reminder),
+                  onEdit: _openEditReminder,
+                  onDelete: _confirmDelete,
+                );
+              },
             ),
-            _DetailActions(
-              isCompleted: _isCompleted,
-              onComplete: _confirmCompletion,
-              onEdit: _openEditReminder,
-              onDelete: _confirmDelete,
+    );
+  }
+}
+
+class _DetailsBody extends StatelessWidget {
+  final ReminderModel reminder;
+  final bool isBusy;
+  final VoidCallback onComplete;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  const _DetailsBody({
+    required this.reminder,
+    required this.isBusy,
+    required this.onComplete,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  String get status {
+    if (reminder.isCompleted) return 'Completed';
+    final today = DateUtils.dateOnly(DateTime.now());
+    return DateUtils.dateOnly(reminder.date).isBefore(today)
+        ? 'Overdue'
+        : 'Upcoming';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final notes = reminder.notes?.trim();
+    return SafeArea(
+      top: false,
+      child: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+              children: [
+                _SummaryCard(reminder: reminder, status: status),
+                const SizedBox(height: AppConstants.paddingMedium),
+                Text(
+                  'Description',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(AppConstants.paddingMedium),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    notes == null || notes.isEmpty ? 'No notes added' : notes,
+                    style: const TextStyle(height: 1.5),
+                  ),
+                ),
+                const SizedBox(height: AppConstants.paddingLarge),
+                Text('Details', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 8),
+                _ReminderDetailsCard(reminder: reminder),
+              ],
             ),
-          ],
-        ),
+          ),
+          _DetailActions(
+            isCompleted: reminder.isCompleted,
+            isBusy: isBusy,
+            onComplete: onComplete,
+            onEdit: onEdit,
+            onDelete: onDelete,
+          ),
+        ],
       ),
     );
   }
 }
 
 class _SummaryCard extends StatelessWidget {
-  final bool isCompleted;
+  final ReminderModel reminder;
+  final String status;
 
-  const _SummaryCard({required this.isCompleted});
+  const _SummaryCard({required this.reminder, required this.status});
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = isCompleted ? AppColors.success : AppColors.primaryBlue;
-    final statusBackground = isCompleted
+    final statusColor = status == 'Overdue'
+        ? AppColors.error
+        : status == 'Completed'
+        ? AppColors.success
+        : AppColors.primaryBlue;
+    final statusBackground = status == 'Overdue'
+        ? const Color(0xFFFEE2E2)
+        : status == 'Completed'
         ? const Color(0xFFDCFCE7)
         : const Color(0xFFDBEAFE);
     return Card(
@@ -252,8 +345,8 @@ class _SummaryCard extends StatelessWidget {
                 color: const Color(0xFFEFF6FF),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
-                Icons.ac_unit_rounded,
+              child: Icon(
+                _categoryIcon(reminder.category),
                 color: AppColors.primaryBlue,
                 size: 38,
               ),
@@ -264,7 +357,7 @@ class _SummaryCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'AC Service',
+                    reminder.title,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: 6),
@@ -276,9 +369,13 @@ class _SummaryCard extends StatelessWidget {
                         color: AppColors.textSecondary,
                       ),
                       const SizedBox(width: 4),
-                      Text(
-                        'Living Room',
-                        style: Theme.of(context).textTheme.bodyMedium,
+                      Expanded(
+                        child: Text(
+                          reminder.location.trim().isEmpty
+                              ? 'Not specified'
+                              : reminder.location,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
                       ),
                     ],
                   ),
@@ -292,7 +389,7 @@ class _SummaryCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                isCompleted ? 'Completed' : 'Upcoming',
+                status,
                 style: TextStyle(
                   color: statusColor,
                   fontSize: 12,
@@ -308,34 +405,38 @@ class _SummaryCard extends StatelessWidget {
 }
 
 class _ReminderDetailsCard extends StatelessWidget {
-  const _ReminderDetailsCard();
+  final ReminderModel reminder;
 
-  static const _details = [
-    (Icons.calendar_today_outlined, 'Next Reminder Date', '15 May 2025'),
-    (Icons.access_time_rounded, 'Time', '10:00 AM'),
-    (Icons.repeat_rounded, 'Frequency', 'Every 6 months'),
-    (Icons.sell_outlined, 'Category', 'HVAC'),
-    (
-      Icons.description_outlined,
-      'Notes',
-      'Check filter, clean coils, and inspect gas levels.',
-    ),
-  ];
+  const _ReminderDetailsCard({required this.reminder});
 
   @override
   Widget build(BuildContext context) {
+    final details = [
+      (
+        Icons.calendar_today_outlined,
+        'Next Reminder Date',
+        MaterialLocalizations.of(context).formatMediumDate(reminder.date),
+      ),
+      (
+        Icons.access_time_rounded,
+        'Time',
+        reminder.time?.trim().isNotEmpty == true ? reminder.time! : 'Not set',
+      ),
+      (Icons.repeat_rounded, 'Frequency', reminder.frequency),
+      (Icons.sell_outlined, 'Category', reminder.category),
+    ];
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         child: Column(
           children: [
-            for (var index = 0; index < _details.length; index++) ...[
+            for (var index = 0; index < details.length; index++) ...[
               _DetailRow(
-                icon: _details[index].$1,
-                label: _details[index].$2,
-                value: _details[index].$3,
+                icon: details[index].$1,
+                label: details[index].$2,
+                value: details[index].$3,
               ),
-              if (index != _details.length - 1)
+              if (index != details.length - 1)
                 const Divider(height: 1, indent: 46),
             ],
           ],
@@ -389,12 +490,14 @@ class _DetailRow extends StatelessWidget {
 
 class _DetailActions extends StatelessWidget {
   final bool isCompleted;
+  final bool isBusy;
   final VoidCallback onComplete;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const _DetailActions({
     required this.isCompleted,
+    required this.isBusy,
     required this.onComplete,
     required this.onEdit,
     required this.onDelete,
@@ -411,7 +514,7 @@ class _DetailActions extends StatelessWidget {
       child: Column(
         children: [
           ElevatedButton.icon(
-            onPressed: isCompleted ? null : onComplete,
+            onPressed: isCompleted || isBusy ? null : onComplete,
             icon: const Icon(Icons.check_circle_rounded),
             label: Text(isCompleted ? 'Completed' : 'Mark as Completed'),
           ),
@@ -420,12 +523,7 @@ class _DetailActions extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: onEdit,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.primaryBlue,
-                    side: const BorderSide(color: AppColors.primaryBlue),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                  ),
+                  onPressed: isBusy ? null : onEdit,
                   icon: const Icon(Icons.edit_outlined),
                   label: const Text('Edit'),
                 ),
@@ -433,11 +531,10 @@ class _DetailActions extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: OutlinedButton.icon(
-                  onPressed: onDelete,
+                  onPressed: isBusy ? null : onDelete,
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppColors.error,
                     side: const BorderSide(color: AppColors.error),
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
                   ),
                   icon: const Icon(Icons.delete_outline_rounded),
                   label: const Text('Delete'),
@@ -449,4 +546,16 @@ class _DetailActions extends StatelessWidget {
       ),
     );
   }
+}
+
+IconData _categoryIcon(String category) {
+  return switch (category) {
+    'HVAC' => Icons.ac_unit_rounded,
+    'Refrigerator' => Icons.kitchen_rounded,
+    'Water Filter' => Icons.water_drop_outlined,
+    'Washing Machine' => Icons.local_laundry_service_outlined,
+    'Electrical' => Icons.electrical_services_rounded,
+    'Plumbing' => Icons.plumbing_rounded,
+    _ => Icons.build_outlined,
+  };
 }
