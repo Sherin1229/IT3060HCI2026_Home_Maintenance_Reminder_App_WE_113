@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'add_warranty_screen.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -8,7 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../config/app_colors.dart';
 import '../../utils/constants.dart';
 import '../../services/warranty_service.dart';
-import 'add_warranty_screen.dart';
+
 
 class AddWarrantyDocumentScreen extends StatefulWidget {
   final WarrantyDraft draft;
@@ -23,26 +24,20 @@ class AddWarrantyDocumentScreen extends StatefulWidget {
 class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
   final WarrantyService _warrantyService = WarrantyService();
   bool _isSaving = false;
-  static const _documentTypes = [
-    'Warranty Card',
-    'Purchase Receipt',
-    'Invoice',
-    'Service Agreement',
-    'Other',
-  ];
 
   final _formKey = GlobalKey<FormState>();
+  final _documentTypeController = TextEditingController();
   final _notesController = TextEditingController();
 
   PlatformFile? _selectedFile;
   Uint8List? _selectedImageBytes;
   int? _selectedFileSize;
-  String? _documentType;
   bool _showFileError = false;
   bool _isSelectingFile = false;
 
   @override
   void dispose() {
+    _documentTypeController.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -171,7 +166,8 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
   Future<void> _saveWarranty() async {
     FocusScope.of(context).unfocus();
 
-    final hasFile = _selectedFile != null;
+    final selectedFile = _selectedFile;
+    final hasFile = selectedFile != null;
 
     setState(() => _showFileError = !hasFile);
 
@@ -195,7 +191,12 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
     });
 
     try {
-      await _warrantyService.createWarranty(
+      // Read the selected document before creating the Firestore warranty.
+      final fileBytes = await selectedFile.readAsBytes();
+      final fileSize = _selectedFileSize ?? fileBytes.length;
+
+      // Create the warranty and keep its Firestore document ID.
+      final warrantyId = await _warrantyService.createWarranty(
         userId: user.uid,
         applianceType: widget.draft.applianceType,
         brand: widget.draft.brand,
@@ -204,8 +205,17 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
         warrantyEndDate: widget.draft.warrantyEndDate,
         provider: widget.draft.provider,
         notes: widget.draft.notes,
-        documentType: _documentType!,
-        documentName: _selectedFile!.name,
+        documentType: _documentTypeController.text.trim(),
+        documentName: selectedFile.name,
+      );
+
+      // Upload the actual document to Firebase Storage.
+      await _warrantyService.uploadWarrantyDocument(
+        userId: user.uid,
+        warrantyId: warrantyId,
+        fileBytes: fileBytes,
+        fileName: selectedFile.name,
+        fileSize: fileSize,
       );
 
       if (!mounted) return;
@@ -224,7 +234,9 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Unable to save warranty. Please try again.'),
+          content: Text(
+            'Unable to save warranty document. Please try again.',
+          ),
         ),
       );
     } finally {
@@ -287,23 +299,18 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
                 icon: Icons.description_outlined,
                 label: 'Document Type',
                 isRequired: true,
-                child: DropdownButtonFormField<String>(
-                  initialValue: _documentType,
-                  isExpanded: true,
-                  hint: const Text('Select document type'),
-                  items: _documentTypes
-                      .map(
-                        (type) => DropdownMenuItem(
-                          value: type,
-                          child: Text(type, overflow: TextOverflow.ellipsis),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() => _documentType = value);
+                child: TextFormField(
+                  controller: _documentTypeController,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter document type',
+                  ),
+                  validator: (value) {
+                    if (value == null || value.trim().isEmpty) {
+                      return 'Please enter a document type.';
+                    }
+                    return null;
                   },
-                  validator: (value) =>
-                      value == null ? 'Please select a document type.' : null,
                 ),
               ),
               const SizedBox(height: AppConstants.paddingMedium),

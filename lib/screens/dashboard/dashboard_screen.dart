@@ -12,6 +12,11 @@ class DashboardScreen extends StatelessWidget {
         title: const Text('Dashboard'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.notifications_none_rounded),
+            tooltip: 'Notifications',
+            onPressed: () => context.push('/notifications'),
+          ),
+          IconButton(
             icon: const Icon(Icons.history_rounded),
             tooltip: 'Maintenance History',
             // TEMPORARY: Maintenance entry until Dashboard implementation is completed.

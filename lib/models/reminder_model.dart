@@ -8,8 +8,11 @@ class ReminderModel {
   final String location;
   final DateTime date;
   final String? time;
+  final String frequency;
   final String? notes;
+  final bool isCompleted;
   final DateTime createdAt;
+  final DateTime? updatedAt;
 
   const ReminderModel({
     required this.id,
@@ -19,8 +22,11 @@ class ReminderModel {
     required this.location,
     required this.date,
     this.time,
+    this.frequency = 'Does not repeat',
     this.notes,
+    this.isCompleted = false,
     required this.createdAt,
+    this.updatedAt,
   });
 
   Map<String, dynamic> toMap() {
@@ -31,8 +37,11 @@ class ReminderModel {
       'location': location,
       'date': Timestamp.fromDate(date),
       'time': time,
+      'frequency': frequency,
       'notes': notes,
+      'isCompleted': isCompleted,
       'createdAt': Timestamp.fromDate(createdAt),
+      if (updatedAt != null) 'updatedAt': Timestamp.fromDate(updatedAt!),
     };
   }
 
@@ -43,10 +52,21 @@ class ReminderModel {
       title: map['title'] ?? '',
       category: map['category'] ?? '',
       location: map['location'] ?? '',
-      date: (map['date'] as Timestamp).toDate(),
-      time: map['time'],
-      notes: map['notes'],
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      date: _dateFrom(map['date']) ?? DateTime.now(),
+      time: map['time'] as String?,
+      frequency: (map['frequency'] as String?)?.trim().isNotEmpty == true
+          ? map['frequency'] as String
+          : 'Does not repeat',
+      notes: map['notes'] as String?,
+      isCompleted: map['isCompleted'] as bool? ?? false,
+      createdAt: _dateFrom(map['createdAt']) ?? DateTime.now(),
+      updatedAt: _dateFrom(map['updatedAt']),
     );
+  }
+
+  static DateTime? _dateFrom(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    return null;
   }
 }
