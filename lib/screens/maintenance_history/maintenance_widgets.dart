@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_colors.dart';
-import 'maintenance_models.dart';
+import '../../models/maintenance_model.dart';
 
 class MaintenanceStatusPill extends StatelessWidget {
   final MaintenanceStatus status;

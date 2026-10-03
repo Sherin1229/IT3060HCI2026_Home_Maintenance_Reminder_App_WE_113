@@ -1,12 +1,50 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
 import '../../config/app_colors.dart';
-import 'maintenance_models.dart';
+import '../../models/maintenance_model.dart';
+import '../../providers/maintenance_provider.dart';
 import 'maintenance_widgets.dart';
 
 class MaintenanceRecordDetailsScreen extends StatelessWidget {
+  final String? recordId;
+  const MaintenanceRecordDetailsScreen({super.key, required this.recordId});
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (recordId == null || recordId!.isEmpty || user == null) {
+      return const MaintenanceUnavailableScreen();
+    }
+    return StreamBuilder<MaintenanceRecord?>(
+      stream: context.read<MaintenanceProvider>().getRecordById(
+        recordId!,
+        user.uid,
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const MaintenanceUnavailableScreen(
+            message: 'Unable to load this maintenance record.',
+          );
+        }
+        if (!snapshot.hasData) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final record = snapshot.data;
+        if (record == null) return const MaintenanceUnavailableScreen();
+        return _DetailsView(record: record);
+      },
+    );
+  }
+}
+
+class _DetailsView extends StatelessWidget {
   final MaintenanceRecord record;
-  const MaintenanceRecordDetailsScreen({super.key, required this.record});
+  const _DetailsView({required this.record});
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +53,7 @@ class MaintenanceRecordDetailsScreen extends StatelessWidget {
         title: const Text('Record Details'),
         actions: [
           TextButton(
-            onPressed: () => context.push('/maintenance/add', extra: record),
+            onPressed: () => context.push('/maintenance/add', extra: record.id),
             child: const Text('Edit'),
           ),
         ],
@@ -66,15 +104,22 @@ class MaintenanceRecordDetailsScreen extends StatelessWidget {
           const SizedBox(height: 22),
           const Text('Photos', style: TextStyle(fontWeight: FontWeight.w700)),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              _PhotoPlaceholder(icon: Icons.photo_outlined),
-              const SizedBox(width: 10),
-              _PhotoPlaceholder(icon: Icons.receipt_long_outlined),
-              const SizedBox(width: 10),
-              const _PhotoPlaceholder(label: '+3'),
-            ],
-          ),
+          if (record.photoUrls.isEmpty)
+            const Text(
+              'No photos attached.',
+              style: TextStyle(color: AppColors.textSecondary),
+            )
+          else
+            SizedBox(
+              height: 76,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: record.photoUrls.length,
+                separatorBuilder: (_, _) => const SizedBox(width: 10),
+                itemBuilder: (context, index) =>
+                    _PhotoThumbnail(url: record.photoUrls[index]),
+              ),
+            ),
           const SizedBox(height: 28),
           OutlinedButton.icon(
             onPressed: () => _confirmDelete(context),
@@ -110,12 +155,21 @@ class MaintenanceRecordDetailsScreen extends StatelessWidget {
         ],
       ),
     );
-    if (confirmed == true && context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Record deleted locally.')));
-      context.pop();
-    }
+    if (confirmed != true || !context.mounted) return;
+    final success = await context.read<MaintenanceProvider>().deleteRecord(
+      record.id,
+    );
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          success
+              ? 'Maintenance record deleted.'
+              : 'Unable to delete maintenance record.',
+        ),
+      ),
+    );
+    if (success) context.pop();
   }
 }
 
@@ -146,28 +200,66 @@ class _DetailRow extends StatelessWidget {
   );
 }
 
-class _PhotoPlaceholder extends StatelessWidget {
-  final IconData? icon;
-  final String? label;
-  const _PhotoPlaceholder({this.icon, this.label});
+class _PhotoThumbnail extends StatelessWidget {
+  final String url;
+  const _PhotoThumbnail({required this.url});
   @override
-  Widget build(BuildContext context) => Container(
-    height: 76,
-    width: 76,
-    decoration: BoxDecoration(
-      color: const Color(0xFFF1F5F9),
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: Center(
-      child: label != null
-          ? Text(
-              label!,
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => showDialog<void>(
+        context: context,
+        builder: (context) => Dialog(
+          child: InteractiveViewer(
+            child: Image.network(
+              url,
+              fit: BoxFit.contain,
+              errorBuilder: (_, _, _) => const SizedBox(
+                height: 160,
+                child: Center(child: Text('Photo unavailable.')),
               ),
-            )
-          : Icon(icon, color: AppColors.textSecondary, size: 28),
-    ),
-  );
+            ),
+          ),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(10),
+        child: Image.network(
+          url,
+          height: 76,
+          width: 76,
+          fit: BoxFit.cover,
+          errorBuilder: (_, _, _) => Container(
+            height: 76,
+            width: 76,
+            color: const Color(0xFFF1F5F9),
+            child: const Icon(
+              Icons.broken_image_outlined,
+              color: AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class MaintenanceUnavailableScreen extends StatelessWidget {
+  final String message;
+  const MaintenanceUnavailableScreen({
+    super.key,
+    this.message = 'Maintenance record information is unavailable.',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Maintenance')),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(message, textAlign: TextAlign.center),
+        ),
+      ),
+    );
+  }
 }
