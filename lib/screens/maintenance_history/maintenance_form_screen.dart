@@ -1,43 +1,78 @@
+import 'dart:typed_data';
+
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../config/app_colors.dart';
-import '../../widgets/primary_button.dart';
-import 'maintenance_models.dart';
+import 'package:provider/provider.dart';
 
-enum MaintenanceFormMode { add, complete }
+import '../../config/app_colors.dart';
+import '../../models/maintenance_model.dart';
+import '../../providers/maintenance_provider.dart';
+import '../../widgets/primary_button.dart';
 
 class MaintenanceFormScreen extends StatefulWidget {
   final MaintenanceFormMode mode;
-  final MaintenanceRecord? record;
-  const MaintenanceFormScreen({super.key, required this.mode, this.record});
+  final String? recordId;
+  const MaintenanceFormScreen({super.key, required this.mode, this.recordId});
 
   @override
   State<MaintenanceFormScreen> createState() => _MaintenanceFormScreenState();
 }
 
+enum MaintenanceFormMode { add, edit, complete }
+
 class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
   final _formKey = GlobalKey<FormState>();
-  late final TextEditingController _notesController;
-  late final TextEditingController _costController;
-  late final TextEditingController _providerController;
+  final _notesController = TextEditingController();
+  final _costController = TextEditingController();
+  final _providerController = TextEditingController();
   String? _appliance;
   String? _type;
   DateTime? _date;
-  final List<String> _photos = [];
+  MaintenanceRecord? _record;
+  List<PlatformFile> _selectedFiles = [];
+  bool _loadingRecord = false;
+  bool _submitting = false;
 
   bool get isCompleting => widget.mode == MaintenanceFormMode.complete;
+  bool get isEditing => widget.mode == MaintenanceFormMode.edit;
 
   @override
   void initState() {
     super.initState();
-    final record = widget.record;
-    _notesController = TextEditingController(text: record?.notes);
-    _costController = TextEditingController(text: record?.cost);
-    _providerController = TextEditingController(text: record?.serviceProvider);
-    _date = isCompleting ? DateTime.now() : record?.scheduledDate;
-    _appliance = record?.appliance;
-    _type = record?.title;
+    if (widget.recordId != null) {
+      _loadingRecord = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _loadRecord());
+    }
+  }
+
+  Future<void> _loadRecord() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || widget.recordId == null) {
+      if (mounted) setState(() => _loadingRecord = false);
+      return;
+    }
+    MaintenanceRecord? record;
+    try {
+      record = await context.read<MaintenanceProvider>().getRecordOnce(
+        widget.recordId!,
+        user.uid,
+      );
+    } catch (error) {
+      debugPrint('Maintenance record load error: $error');
+    }
+    if (!mounted) return;
+    if (record != null) {
+      _record = record;
+      _appliance = record.appliance;
+      _type = record.title;
+      _date = isCompleting ? DateTime.now() : record.scheduledDate;
+      _notesController.text = record.notes ?? '';
+      _costController.text = record.cost ?? '';
+      _providerController.text = record.serviceProvider ?? '';
+    }
+    setState(() => _loadingRecord = false);
   }
 
   @override
@@ -59,44 +94,146 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
   }
 
   Future<void> _selectPhotos() async {
-    final result = await FilePicker.pickFiles(type: FileType.image);
-    setState(() => _photos.addAll(result.map((file) => file.name)));
+    final files = await FilePicker.pickFiles(type: FileType.image);
+    if (mounted) setState(() => _selectedFiles = [..._selectedFiles, ...files]);
   }
 
-  void _submit() {
-    if (!_formKey.currentState!.validate() || _date == null) {
+  Future<void> _submit() async {
+    FocusScope.of(context).unfocus();
+    if (!(_formKey.currentState?.validate() ?? false) || _date == null) {
       setState(() {});
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          isCompleting
-              ? 'Maintenance marked as completed.'
-              : 'Maintenance record saved.',
-        ),
-      ),
-    );
-    context.pop();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      _showMessage('Please log in before saving a maintenance record.');
+      return;
+    }
+    if ((isEditing || isCompleting) && _record == null) {
+      _showMessage('Maintenance record information is unavailable.');
+      return;
+    }
+    final maintenanceProvider = context.read<MaintenanceProvider>();
+    setState(() => _submitting = true);
+    try {
+      final bytes = <Uint8List>[];
+      for (final file in _selectedFiles) {
+        bytes.add(await file.readAsBytes());
+      }
+      final uploadedUrls = _selectedFiles.isEmpty
+          ? <String>[]
+          : await maintenanceProvider.uploadPhotos(
+              bytes,
+              _selectedFiles.map((file) => file.name).toList(),
+            );
+      if (_selectedFiles.isNotEmpty && uploadedUrls == null) {
+        throw StateError('Photo upload failed.');
+      }
+      final existingUrls = _record?.photoUrls ?? const <String>[];
+      final photoUrls = [...existingUrls, ...?uploadedUrls];
+      final success = isCompleting
+          ? await maintenanceProvider.markCompleted(
+              recordId: _record!.id,
+              completedDate: _date!,
+              notes: _optionalValue(_notesController.text),
+              cost: _optionalValue(_costController.text),
+              serviceProvider: _optionalValue(_providerController.text),
+              photoUrls: photoUrls,
+            )
+          : isEditing
+          ? await maintenanceProvider.updateRecord(
+              MaintenanceRecord(
+                id: _record!.id,
+                userId: _record!.userId,
+                title: _type!.trim(),
+                appliance: _appliance!.trim(),
+                location: _record!.location.isEmpty
+                    ? _appliance!.trim()
+                    : _record!.location,
+                scheduledDate: _date!,
+                completedDate: _record!.completedDate,
+                cost: _optionalValue(_costController.text),
+                serviceProvider: _optionalValue(_providerController.text),
+                notes: _optionalValue(_notesController.text),
+                photoUrls: photoUrls,
+                createdAt: _record!.createdAt,
+                updatedAt: _record!.updatedAt,
+              ),
+            )
+          : await maintenanceProvider.createRecord(
+              MaintenanceRecord(
+                id: '',
+                userId: user.uid,
+                title: _type!.trim(),
+                appliance: _appliance!.trim(),
+                location: _appliance!.trim(),
+                scheduledDate: _date!,
+                cost: _optionalValue(_costController.text),
+                serviceProvider: _optionalValue(_providerController.text),
+                notes: _optionalValue(_notesController.text),
+                photoUrls: photoUrls,
+                createdAt: DateTime.now(),
+              ),
+            );
+      if (!mounted) return;
+      if (!success) {
+        _showMessage(
+          maintenanceProvider.errorMessage ??
+              'Unable to save maintenance record.',
+        );
+        return;
+      }
+      _showMessage(
+        isCompleting
+            ? 'Maintenance marked as completed.'
+            : isEditing
+            ? 'Maintenance record updated.'
+            : 'Maintenance record saved.',
+      );
+      context.pop();
+    } catch (error) {
+      debugPrint('Maintenance form error: $error');
+      if (mounted) {
+        _showMessage('Unable to save maintenance record. Please try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
+
+  String? _optionalValue(String value) {
+    final trimmed = value.trim();
+    return trimmed.isEmpty ? null : trimmed;
+  }
+
+  void _showMessage(String message) => ScaffoldMessenger.of(
+    context,
+  ).showSnackBar(SnackBar(content: Text(message)));
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          isCompleting ? 'Mark as Completed' : 'Add Maintenance Record',
+    if (_loadingRecord) {
+      return Scaffold(
+        appBar: AppBar(title: Text(_title)),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    if ((isEditing || isCompleting) && _record == null) {
+      return const Scaffold(
+        body: Center(
+          child: Text('Maintenance record information is unavailable.'),
         ),
-      ),
+      );
+    }
+    return Scaffold(
+      appBar: AppBar(title: Text(_title)),
       body: Form(
         key: _formKey,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
           children: [
             if (isCompleting) ...[
-              _SelectedRecordCard(
-                record: widget.record ?? maintenanceRecords.first,
-              ),
+              _SelectedRecordCard(record: _record!),
               const SizedBox(height: 20),
             ],
             if (!isCompleting) ...[
@@ -165,16 +302,11 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                 ),
               ),
             const SizedBox(height: 16),
-            _FieldLabel(label: 'Notes', requiredField: !isCompleting),
+            _FieldLabel(label: 'Notes'),
             TextFormField(
               controller: _notesController,
               maxLines: 4,
-              validator: isCompleting
-                  ? null
-                  : (value) => value == null || value.trim().isEmpty
-                        ? 'Please add notes'
-                        : null,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 hintText: 'Add details about the maintenance...',
               ),
             ),
@@ -196,17 +328,33 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
             ),
             const SizedBox(height: 16),
             _FieldLabel(label: 'Attach Photos (Optional)'),
-            _PhotoPicker(photos: _photos, onTap: _selectPhotos),
+            _PhotoPicker(
+              files: _selectedFiles,
+              existingCount: _record?.photoUrls.length ?? 0,
+              onTap: _selectPhotos,
+            ),
             const SizedBox(height: 24),
             PrimaryButton(
-              text: isCompleting ? 'Mark as Completed' : 'Save Record',
-              onPressed: _submit,
+              text: _buttonLabel,
+              onPressed: _submitting ? null : _submit,
+              isLoading: _submitting,
             ),
           ],
         ),
       ),
     );
   }
+
+  String get _title => isCompleting
+      ? 'Mark as Completed'
+      : isEditing
+      ? 'Edit Maintenance Record'
+      : 'Add Maintenance Record';
+  String get _buttonLabel => isCompleting
+      ? 'Mark as Completed'
+      : isEditing
+      ? 'Update Record'
+      : 'Save Record';
 }
 
 class _FieldLabel extends StatelessWidget {
@@ -308,24 +456,34 @@ class _SelectedRecordCard extends StatelessWidget {
 }
 
 class _PhotoPicker extends StatelessWidget {
-  final List<String> photos;
+  final List<PlatformFile> files;
+  final int existingCount;
   final VoidCallback onTap;
-  const _PhotoPicker({required this.photos, required this.onTap});
+  const _PhotoPicker({
+    required this.files,
+    required this.existingCount,
+    required this.onTap,
+  });
   @override
   Widget build(BuildContext context) {
-    final content = photos.isEmpty
-        ? const Column(
+    final content = files.isEmpty
+        ? Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(
+              const Icon(
                 Icons.add_photo_alternate_outlined,
                 color: AppColors.textSecondary,
                 size: 28,
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Text(
-                'Tap to add photos',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                existingCount == 0
+                    ? 'Tap to add photos'
+                    : '$existingCount existing photo(s) · Tap to add more',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 12,
+                ),
               ),
             ],
           )
@@ -334,11 +492,11 @@ class _PhotoPicker extends StatelessWidget {
             child: Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: photos
+              children: files
                   .map(
-                    (photo) => Chip(
+                    (file) => Chip(
                       avatar: const Icon(Icons.image_outlined, size: 16),
-                      label: Text(photo, overflow: TextOverflow.ellipsis),
+                      label: Text(file.name, overflow: TextOverflow.ellipsis),
                     ),
                   )
                   .toList(),

@@ -14,23 +14,14 @@ import '../screens/appliances/appliance_details_screen.dart';
 import '../models/appliance_model.dart';
 import '../screens/reminders/reminders_screen.dart';
 import '../screens/reminders/create_reminder_screen.dart';
-import '../screens/reminders/reminder_details_screen.dart';
-import '../screens/reminders/reminder_schedule_screen.dart';
-import '../screens/reminders/edit_reminder_screen.dart';
 import '../screens/warranties/warranties_screen.dart';
 import '../screens/warranties/add_warranty_screen.dart';
 import '../screens/warranties/add_warranty_document_screen.dart';
-import '../screens/warranties/warranty_details_screen.dart';
-import '../screens/warranties/edit_warranty_screen.dart';
-import '../screens/warranties/warranty_expiry_screen.dart';
 import '../screens/maintenance_history/maintenance_history_screen.dart';
 import '../screens/maintenance_history/maintenance_form_screen.dart';
-import '../screens/maintenance_history/maintenance_models.dart';
 import '../screens/maintenance_history/maintenance_overview_screen.dart';
 import '../screens/maintenance_history/maintenance_record_details_screen.dart';
 import '../screens/profile/profile_screen.dart';
-import '../screens/notifications/notifications_screen.dart';
-import '../screens/notifications/notification_settings_screen.dart';
 
 /// Centralized Router for HomiQ
 /// Defines routing hierarchy using GoRouter.
@@ -90,10 +81,10 @@ class AppRouter {
         path: '/maintenance/add',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => MaintenanceFormScreen(
-          mode: MaintenanceFormMode.add,
-          record: state.extra is MaintenanceRecord
-              ? state.extra as MaintenanceRecord
-              : null,
+          mode: state.extra is String
+              ? MaintenanceFormMode.edit
+              : MaintenanceFormMode.add,
+          recordId: state.extra is String ? state.extra as String : null,
         ),
       ),
       GoRoute(
@@ -101,18 +92,14 @@ class AppRouter {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => MaintenanceFormScreen(
           mode: MaintenanceFormMode.complete,
-          record: state.extra is MaintenanceRecord
-              ? state.extra as MaintenanceRecord
-              : maintenanceRecords.first,
+          recordId: state.extra is String ? state.extra as String : null,
         ),
       ),
       GoRoute(
         path: '/maintenance/details',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => MaintenanceRecordDetailsScreen(
-          record: state.extra is MaintenanceRecord
-              ? state.extra as MaintenanceRecord
-              : maintenanceRecords.first,
+          recordId: state.extra is String ? state.extra as String : null,
         ),
       ),
       GoRoute(
@@ -130,86 +117,6 @@ class AppRouter {
           }
           return AddWarrantyDocumentScreen(draft: draft);
         },
-      ),
-      GoRoute(
-        path: '/warranties/details',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) {
-          final warrantyId = state.extra;
-
-          if (warrantyId is! String || warrantyId.isEmpty) {
-            return const Scaffold(
-              body: Center(child: Text('Warranty information is unavailable.')),
-            );
-          }
-
-          return WarrantyDetailsScreen(warrantyId: warrantyId);
-        },
-      ),
-      GoRoute(
-        path: '/warranties/edit',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) {
-          final warrantyId = state.extra;
-
-          if (warrantyId is! String || warrantyId.isEmpty) {
-            return const Scaffold(
-              body: Center(child: Text('Warranty information is unavailable.')),
-            );
-          }
-
-          return EditWarrantyScreen(warrantyId: warrantyId);
-        },
-      ),
-      GoRoute(
-        path: '/warranties/expiry',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const WarrantyExpiryScreen(),
-      ),
-      GoRoute(
-        path: '/reminders/details',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) {
-          final reminderId = state.extra;
-          if (reminderId is! String || reminderId.isEmpty) {
-            return const Scaffold(
-              body: Center(child: Text('Reminder information is unavailable.')),
-            );
-          }
-          return ReminderDetailsScreen(reminderId: reminderId);
-        },
-      ),
-      GoRoute(
-        path: '/reminders/schedule',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => ReminderScheduleScreen(
-          initialSelection: state.extra is ReminderScheduleSelection
-              ? state.extra as ReminderScheduleSelection
-              : null,
-        ),
-      ),
-      GoRoute(
-        path: '/reminders/edit',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) {
-          final reminderId = state.extra;
-          if (reminderId is! String || reminderId.isEmpty) {
-            return const Scaffold(
-              body: Center(child: Text('Reminder information is unavailable.')),
-            );
-          }
-          return EditReminderScreen(reminderId: reminderId);
-        },
-      ),
-      GoRoute(
-        path: '/notifications',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const NotificationsScreen(),
-      ),
-      GoRoute(
-        path: '/notifications/settings',
-        parentNavigatorKey: _rootNavigatorKey,
-        builder: (context, state) => const NotificationSettingsScreen(),
       ),
       GoRoute(
         path: '/appliances/add',
