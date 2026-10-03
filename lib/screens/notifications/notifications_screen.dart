@@ -1,30 +1,14 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 
 import '../../config/app_colors.dart';
+import '../../models/notification_model.dart';
+import '../../providers/notification_provider.dart';
 import '../../utils/constants.dart';
 
 enum _NotificationFilter { all, unread, system }
-
-class _NotificationItem {
-  final String title;
-  final String message;
-  final String timestamp;
-  final IconData icon;
-  final Color accent;
-  final bool isSystem;
-  bool isRead;
-
-  _NotificationItem({
-    required this.title,
-    required this.message,
-    required this.timestamp,
-    required this.icon,
-    required this.accent,
-    required this.isSystem,
-    required this.isRead,
-  });
-}
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -36,87 +20,40 @@ class NotificationsScreen extends StatefulWidget {
 class _NotificationsScreenState extends State<NotificationsScreen> {
   _NotificationFilter _selectedFilter = _NotificationFilter.all;
 
-  final List<_NotificationItem> _notifications = [
-    _NotificationItem(
-      title: 'AC Service due soon',
-      message: 'Your AC Service is due in 5 days.',
-      timestamp: '2h ago',
-      icon: Icons.ac_unit_rounded,
-      accent: AppColors.primaryBlue,
-      isSystem: false,
-      isRead: false,
-    ),
-    _NotificationItem(
-      title: 'Water Filter Replacement overdue',
-      message: 'This maintenance reminder was due 3 days ago.',
-      timestamp: '1d ago',
-      icon: Icons.water_drop_outlined,
-      accent: AppColors.error,
-      isSystem: false,
-      isRead: true,
-    ),
-    _NotificationItem(
-      title: 'Warranty expiring soon',
-      message: 'Your Washing Machine warranty expires in 18 days.',
-      timestamp: '1d ago',
-      icon: Icons.verified_user_outlined,
-      accent: AppColors.warning,
-      isSystem: false,
-      isRead: false,
-    ),
-    _NotificationItem(
-      title: 'Reminder completed',
-      message: 'Kitchen Chimney Cleaning was marked as completed.',
-      timestamp: '3d ago',
-      icon: Icons.check_circle_outline_rounded,
-      accent: AppColors.success,
-      isSystem: false,
-      isRead: true,
-    ),
-    _NotificationItem(
-      title: 'Maintenance record added',
-      message: 'A maintenance record was added for your Refrigerator.',
-      timestamp: '3d ago',
-      icon: Icons.add_circle_outline_rounded,
-      accent: AppColors.primaryBlue,
-      isSystem: false,
-      isRead: true,
-    ),
-    _NotificationItem(
-      title: 'Welcome to HomiQ!',
-      message: "Let's keep your home maintenance organized.",
-      timestamp: '3d ago',
-      icon: Icons.home_outlined,
-      accent: AppColors.primaryBlue,
-      isSystem: true,
-      isRead: true,
-    ),
-  ];
-
-  List<_NotificationItem> get _visibleNotifications {
+  List<NotificationModel> _visibleNotifications(
+    List<NotificationModel> notifications,
+  ) {
     return switch (_selectedFilter) {
-      _NotificationFilter.all => _notifications,
+      _NotificationFilter.all => notifications,
       _NotificationFilter.unread =>
-        _notifications.where((item) => !item.isRead).toList(),
+        notifications.where((item) => !item.isRead).toList(),
       _NotificationFilter.system =>
-        _notifications.where((item) => item.isSystem).toList(),
+        notifications.where((item) => item.isSystem).toList(),
     };
   }
 
-  int get _unreadCount =>
-      _notifications.where((notification) => !notification.isRead).length;
-
-  int get _systemCount =>
-      _notifications.where((notification) => notification.isSystem).length;
-
-  void _markAsRead(_NotificationItem notification) {
+  Future<void> _markAsRead(NotificationModel notification) async {
     if (notification.isRead) return;
-    setState(() => notification.isRead = true);
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final provider = context.read<NotificationProvider>();
+    final success = await provider.markAsRead(notification.id, user.uid);
+    if (!success && mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(
+            content: Text(
+              provider.errorMessage ?? 'Unable to update notification.',
+            ),
+          ),
+        );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final visible = _visibleNotifications;
+    final user = FirebaseAuth.instance.currentUser;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -134,66 +71,85 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         ],
       ),
-      body: SafeArea(
-        top: false,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          children: [
-            Text(
-              "Here's what's happening with your home.",
-              style: Theme.of(context).textTheme.bodyMedium,
+      body: user == null
+          ? const Center(child: Text('Please log in to view notifications.'))
+          : StreamBuilder<List<NotificationModel>>(
+              stream: context.read<NotificationProvider>().getNotifications(
+                user.uid,
+              ),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return const Center(
+                    child: Text('Unable to load notifications.'),
+                  );
+                }
+                return _buildNotificationList(snapshot.data ?? const []);
+              },
             ),
-            const SizedBox(height: AppConstants.paddingMedium),
-            Row(
-              children: [
-                Expanded(
-                  child: _FilterButton(
-                    label: 'All (${_notifications.length})',
-                    selected: _selectedFilter == _NotificationFilter.all,
-                    onTap: () {
-                      setState(() => _selectedFilter = _NotificationFilter.all);
-                    },
+    );
+  }
+
+  Widget _buildNotificationList(List<NotificationModel> notifications) {
+    final visible = _visibleNotifications(notifications);
+    final unreadCount = notifications.where((item) => !item.isRead).length;
+    final systemCount = notifications.where((item) => item.isSystem).length;
+    return SafeArea(
+      top: false,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        children: [
+          Text(
+            "Here's what's happening with your home.",
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: AppConstants.paddingMedium),
+          Row(
+            children: [
+              Expanded(
+                child: _FilterButton(
+                  label: 'All (${notifications.length})',
+                  selected: _selectedFilter == _NotificationFilter.all,
+                  onTap: () =>
+                      setState(() => _selectedFilter = _NotificationFilter.all),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _FilterButton(
+                  label: 'Unread ($unreadCount)',
+                  selected: _selectedFilter == _NotificationFilter.unread,
+                  onTap: () => setState(
+                    () => _selectedFilter = _NotificationFilter.unread,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _FilterButton(
-                    label: 'Unread ($_unreadCount)',
-                    selected: _selectedFilter == _NotificationFilter.unread,
-                    onTap: () {
-                      setState(
-                        () => _selectedFilter = _NotificationFilter.unread,
-                      );
-                    },
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _FilterButton(
+                  label: 'System ($systemCount)',
+                  selected: _selectedFilter == _NotificationFilter.system,
+                  onTap: () => setState(
+                    () => _selectedFilter = _NotificationFilter.system,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _FilterButton(
-                    label: 'System ($_systemCount)',
-                    selected: _selectedFilter == _NotificationFilter.system,
-                    onTap: () {
-                      setState(
-                        () => _selectedFilter = _NotificationFilter.system,
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppConstants.paddingMedium),
-            if (visible.isEmpty)
-              const _EmptyNotifications()
-            else
-              for (final notification in visible) ...[
-                _NotificationCard(
-                  notification: notification,
-                  onTap: () => _markAsRead(notification),
-                ),
-                const SizedBox(height: 10),
-              ],
-          ],
-        ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppConstants.paddingMedium),
+          if (visible.isEmpty)
+            const _EmptyNotifications()
+          else
+            for (final notification in visible) ...[
+              _NotificationCard(
+                notification: notification,
+                onTap: () => _markAsRead(notification),
+              ),
+              const SizedBox(height: 10),
+            ],
+        ],
       ),
     );
   }
@@ -240,7 +196,7 @@ class _FilterButton extends StatelessWidget {
 }
 
 class _NotificationCard extends StatelessWidget {
-  final _NotificationItem notification;
+  final NotificationModel notification;
   final VoidCallback onTap;
 
   const _NotificationCard({required this.notification, required this.onTap});
@@ -248,6 +204,7 @@ class _NotificationCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final presentation = _presentationFor(notification.type);
     return Card(
       color: notification.isRead ? AppColors.surface : const Color(0xFFF8FBFF),
       child: InkWell(
@@ -262,10 +219,10 @@ class _NotificationCard extends StatelessWidget {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: notification.accent.withValues(alpha: 0.12),
+                  color: presentation.color.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(notification.icon, color: notification.accent),
+                child: Icon(presentation.icon, color: presentation.color),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -294,7 +251,7 @@ class _NotificationCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    notification.timestamp,
+                    _relativeTime(notification.createdAt),
                     style: theme.textTheme.bodyMedium?.copyWith(fontSize: 11),
                   ),
                   if (!notification.isRead) ...[
@@ -338,4 +295,25 @@ class _EmptyNotifications extends StatelessWidget {
       ),
     );
   }
+}
+
+({IconData icon, Color color}) _presentationFor(String type) {
+  return switch (type.toLowerCase()) {
+    'reminder' => (icon: Icons.alarm_rounded, color: AppColors.primaryBlue),
+    'warranty' => (
+      icon: Icons.verified_user_outlined,
+      color: AppColors.warning,
+    ),
+    'maintenance' => (icon: Icons.build_outlined, color: AppColors.success),
+    'system' => (icon: Icons.home_outlined, color: AppColors.primaryBlue),
+    _ => (icon: Icons.notifications_outlined, color: AppColors.secondaryTeal),
+  };
+}
+
+String _relativeTime(DateTime createdAt) {
+  final difference = DateTime.now().difference(createdAt);
+  if (difference.isNegative || difference.inMinutes < 1) return 'Just now';
+  if (difference.inHours < 1) return '${difference.inMinutes}m ago';
+  if (difference.inDays < 1) return '${difference.inHours}h ago';
+  return '${difference.inDays}d ago';
 }
