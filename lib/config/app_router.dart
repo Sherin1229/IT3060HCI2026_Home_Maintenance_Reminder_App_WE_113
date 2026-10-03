@@ -2,14 +2,25 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 // Import screens
+import '../screens/splash/splash_screen.dart';
+import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/signup_screen.dart';
 import '../screens/auth/forgot_password_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/appliances/appliances_screen.dart';
+import '../screens/appliances/add_appliance_screen.dart';
+import '../screens/appliances/appliance_details_screen.dart';
+import '../models/appliance_model.dart';
 import '../screens/reminders/reminders_screen.dart';
+import '../screens/reminders/create_reminder_screen.dart';
 import '../screens/warranties/warranties_screen.dart';
+import '../screens/warranties/add_warranty_screen.dart';
+import '../screens/warranties/add_warranty_document_screen.dart';
 import '../screens/maintenance_history/maintenance_history_screen.dart';
+import '../screens/maintenance_history/maintenance_form_screen.dart';
+import '../screens/maintenance_history/maintenance_overview_screen.dart';
+import '../screens/maintenance_history/maintenance_record_details_screen.dart';
 import '../screens/profile/profile_screen.dart';
 
 /// Centralized Router for HomiQ
@@ -19,19 +30,28 @@ class AppRouter {
   AppRouter._();
 
   // Root navigator key for dialogs or overlays that need to be shown outside the navigation shell
-  static final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>();
-  static final GlobalKey<NavigatorState> _shellNavigatorKey = GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> _rootNavigatorKey =
+      GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> _shellNavigatorKey =
+      GlobalKey<NavigatorState>();
 
   static final GoRouter router = GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/splash',
     navigatorKey: _rootNavigatorKey,
     debugLogDiagnostics: true,
     routes: [
-      // Authentication Routes (outside the shell layout)
+      // Splash and Onboarding Routes
       GoRoute(
-        path: '/login',
-        builder: (context, state) => const LoginScreen(),
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
       ),
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+
+      // Authentication Routes (outside the shell layout)
+      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/signup',
         builder: (context, state) => const SignupScreen(),
@@ -43,19 +63,72 @@ class AppRouter {
 
       // Standalone Routes pushed on top of the main navigation shell
       GoRoute(
+        path: '/maintenance',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const MaintenanceOverviewScreen(),
+      ),
+      GoRoute(
         path: '/maintenance-history',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const MaintenanceHistoryScreen(),
+      ),
+      GoRoute(
+        path: '/maintenance/history',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const MaintenanceHistoryScreen(),
+      ),
+      GoRoute(
+        path: '/maintenance/add',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => MaintenanceFormScreen(
+          mode: state.extra is String
+              ? MaintenanceFormMode.edit
+              : MaintenanceFormMode.add,
+          recordId: state.extra is String ? state.extra as String : null,
+        ),
+      ),
+      GoRoute(
+        path: '/maintenance/complete',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => MaintenanceFormScreen(
+          mode: MaintenanceFormMode.complete,
+          recordId: state.extra is String ? state.extra as String : null,
+        ),
+      ),
+      GoRoute(
+        path: '/maintenance/details',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => MaintenanceRecordDetailsScreen(
+          recordId: state.extra is String ? state.extra as String : null,
+        ),
+      ),
+      GoRoute(
+        path: '/add-warranty',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AddWarrantyScreen(),
+      ),
+      GoRoute(
+        path: '/add-warranty/document',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          final draft = state.extra;
+          if (draft is! WarrantyDraft) {
+            return const AddWarrantyScreen();
+          }
+          return AddWarrantyDocumentScreen(draft: draft);
+        },
+      ),
+      GoRoute(
+        path: '/appliances/add',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AddApplianceScreen(),
       ),
 
       // Main Navigation Shell (includes the persistent BottomNavigationBar)
       ShellRoute(
         navigatorKey: _shellNavigatorKey,
         builder: (context, state, child) {
-          return MainNavigationShell(
-            state: state,
-            child: child,
-          );
+          return MainNavigationShell(state: state, child: child);
         },
         routes: [
           GoRoute(
@@ -65,10 +138,26 @@ class AppRouter {
           GoRoute(
             path: '/appliances',
             builder: (context, state) => const AppliancesScreen(),
+            routes: [
+              GoRoute(
+                path: 'details',
+                builder: (context, state) {
+                  final appliance = state.extra as ApplianceItem?;
+                  return ApplianceDetailsScreen(appliance: appliance);
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: '/reminders',
             builder: (context, state) => const RemindersScreen(),
+            routes: [
+              GoRoute(
+                path: 'create',
+                parentNavigatorKey: _rootNavigatorKey,
+                builder: (context, state) => const CreateReminderScreen(),
+              ),
+            ],
           ),
           GoRoute(
             path: '/warranties',
