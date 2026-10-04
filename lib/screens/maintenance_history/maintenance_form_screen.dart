@@ -375,10 +375,10 @@ class _FieldLabel extends StatelessWidget {
                 style: TextStyle(color: AppColors.error),
               ),
           ],
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
             fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ),
@@ -403,8 +403,8 @@ class _DateField extends StatelessWidget {
           date == null ? 'DD / MM / YYYY' : formatMaintenanceDate(date!),
           style: TextStyle(
             color: date == null
-                ? AppColors.textSecondary
-                : AppColors.textPrimary,
+                ? Theme.of(context).colorScheme.onSurfaceVariant
+                : Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ),
@@ -434,16 +434,16 @@ class _SelectedRecordCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   record.appliance,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
                 Text(
                   'Scheduled Date  ${formatMaintenanceDate(record.scheduledDate)}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 11,
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -470,18 +470,18 @@ class _PhotoPicker extends StatelessWidget {
         ? Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(
+              Icon(
                 Icons.add_photo_alternate_outlined,
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
                 size: 28,
               ),
               const SizedBox(height: 8),
               Text(
                 existingCount == 0
                     ? 'Tap to add photos'
-                    : '$existingCount existing photo(s) · Tap to add more',
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
+                    : '$existingCount existing photo(s) Â· Tap to add more',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   fontSize: 12,
                 ),
               ),
@@ -509,8 +509,10 @@ class _PhotoPicker extends StatelessWidget {
         width: double.infinity,
         constraints: const BoxConstraints(minHeight: 104),
         decoration: BoxDecoration(
-          color: AppColors.surface,
-          border: Border.all(color: AppColors.border),
+          color: Theme.of(context).colorScheme.surface,
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
           borderRadius: BorderRadius.circular(12),
         ),
         child: content,

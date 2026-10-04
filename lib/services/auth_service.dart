@@ -61,4 +61,30 @@ class AuthService {
   Future<void> signOut() async {
     await _auth.signOut();
   }
+
+  bool get supportsPasswordChange =>
+      currentUser?.providerData.any(
+        (provider) => provider.providerId == EmailAuthProvider.PROVIDER_ID,
+      ) ??
+      false;
+
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final user = currentUser;
+    final email = user?.email;
+    if (user == null || email == null || email.isEmpty) {
+      throw FirebaseAuthException(code: 'user-not-found');
+    }
+    if (!supportsPasswordChange) {
+      throw FirebaseAuthException(code: 'operation-not-allowed');
+    }
+    final credential = EmailAuthProvider.credential(
+      email: email,
+      password: currentPassword,
+    );
+    await user.reauthenticateWithCredential(credential);
+    await user.updatePassword(newPassword);
+  }
 }

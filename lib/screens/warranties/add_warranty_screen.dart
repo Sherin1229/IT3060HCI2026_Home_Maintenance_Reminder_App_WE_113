@@ -32,7 +32,6 @@ class AddWarrantyScreen extends StatefulWidget {
 }
 
 class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
-
   final _formKey = GlobalKey<FormState>();
   final _applianceTypeController = TextEditingController();
   final _brandController = TextEditingController();
@@ -143,7 +142,7 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         leading: IconButton(
           onPressed: _goBack,
@@ -315,7 +314,12 @@ class _WarrantyStepIndicator extends StatelessWidget {
           Row(
             children: [
               const _StepCircle(number: '1', isActive: true),
-              Expanded(child: Container(height: 2, color: AppColors.border)),
+              Expanded(
+                child: Container(
+                  height: 2,
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
+              ),
               const _StepCircle(number: '2', isActive: false),
             ],
           ),
@@ -359,17 +363,23 @@ class _StepCircle extends StatelessWidget {
       height: 34,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: isActive ? AppColors.primaryBlue : AppColors.surface,
+        color: isActive
+            ? AppColors.primaryBlue
+            : Theme.of(context).colorScheme.surface,
         shape: BoxShape.circle,
         border: Border.all(
-          color: isActive ? AppColors.primaryBlue : AppColors.border,
+          color: isActive
+              ? AppColors.primaryBlue
+              : Theme.of(context).colorScheme.outlineVariant,
           width: 2,
         ),
       ),
       child: Text(
         number,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: isActive ? AppColors.surface : AppColors.textSecondary,
+          color: isActive
+              ? Theme.of(context).colorScheme.onPrimary
+              : Theme.of(context).colorScheme.onSurfaceVariant,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -405,7 +415,7 @@ class _FormRow extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
+              color: AppColors.blueSurface(context),
               borderRadius: BorderRadius.circular(
                 AppConstants.borderRadiusMedium,
               ),
@@ -422,7 +432,7 @@ class _FormRow extends StatelessWidget {
                 TextSpan(
                   text: label,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w600,
                   ),
                   children: isRequired

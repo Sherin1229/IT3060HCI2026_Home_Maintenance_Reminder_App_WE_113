@@ -169,7 +169,7 @@ class _FilterButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: selected ? AppColors.primaryBlue : const Color(0xFFEFF6FF),
+      color: selected ? AppColors.primaryBlue : AppColors.blueSurface(context),
       borderRadius: BorderRadius.circular(22),
       child: InkWell(
         onTap: onTap,
@@ -184,7 +184,9 @@ class _FilterButton extends StatelessWidget {
               label,
               maxLines: 1,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: selected ? AppColors.surface : AppColors.textSecondary,
+                color: selected
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -206,7 +208,9 @@ class _NotificationCard extends StatelessWidget {
     final theme = Theme.of(context);
     final presentation = _presentationFor(notification.type);
     return Card(
-      color: notification.isRead ? AppColors.surface : const Color(0xFFF8FBFF),
+      color: notification.isRead
+          ? Theme.of(context).colorScheme.onPrimary
+          : AppColors.subtleSurface(context),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppConstants.borderRadiusLarge),
@@ -232,7 +236,7 @@ class _NotificationCard extends StatelessWidget {
                     Text(
                       notification.title,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: notification.isRead
                             ? FontWeight.w600
                             : FontWeight.w700,
@@ -281,10 +285,10 @@ class _EmptyNotifications extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 56),
       child: Column(
         children: [
-          const Icon(
+          Icon(
             Icons.notifications_none_rounded,
             size: 52,
-            color: AppColors.textSecondary,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
           const SizedBox(height: 12),
           Text(

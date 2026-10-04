@@ -117,9 +117,9 @@ class _MaintenanceHistoryScreenState extends State<MaintenanceHistoryScreen> {
                     padding: const EdgeInsets.only(top: 12, bottom: 8),
                     child: Text(
                       entry.key,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -173,7 +173,9 @@ class _FilterChip extends StatelessWidget {
       onSelected: (_) => onSelected(),
       selectedColor: AppColors.primaryBlue,
       labelStyle: TextStyle(
-        color: selected ? Colors.white : AppColors.textSecondary,
+        color: selected
+            ? Colors.white
+            : Theme.of(context).colorScheme.onSurfaceVariant,
         fontSize: 12,
         fontWeight: FontWeight.w600,
       ),

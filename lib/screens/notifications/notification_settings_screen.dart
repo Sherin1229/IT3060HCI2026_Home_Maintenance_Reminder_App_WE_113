@@ -214,10 +214,10 @@ class _NotificationSettingsScreenState
                     margin: const EdgeInsets.symmetric(horizontal: 16),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
+                      color: AppColors.blueSurface(context),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Row(
+                    child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Icon(
@@ -230,7 +230,9 @@ class _NotificationSettingsScreenState
                           child: Text(
                             "You'll still receive critical alerts during quiet hours.",
                             style: TextStyle(
-                              color: AppColors.textSecondary,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                               height: 1.4,
                             ),
                           ),
@@ -271,7 +273,7 @@ class _SettingSwitch extends StatelessWidget {
       title: Text(
         title,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: AppColors.textPrimary,
+          color: Theme.of(context).colorScheme.onSurface,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -301,7 +303,9 @@ class _TimeControl extends StatelessWidget {
         Text(label, style: Theme.of(context).textTheme.bodyMedium),
         const SizedBox(height: 6),
         Material(
-          color: enabled ? const Color(0xFFF8FAFC) : const Color(0xFFF1F5F9),
+          color: enabled
+              ? Theme.of(context).scaffoldBackgroundColor
+              : AppColors.neutralSurface(context),
           borderRadius: BorderRadius.circular(12),
           child: InkWell(
             onTap: enabled ? onTap : null,
@@ -310,7 +314,9 @@ class _TimeControl extends StatelessWidget {
               constraints: const BoxConstraints(minHeight: 52),
               padding: const EdgeInsets.symmetric(horizontal: 12),
               decoration: BoxDecoration(
-                border: Border.all(color: AppColors.border),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
@@ -319,8 +325,8 @@ class _TimeControl extends StatelessWidget {
                     Icons.access_time_rounded,
                     size: 20,
                     color: enabled
-                        ? AppColors.primaryDark
-                        : AppColors.textSecondary,
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   const SizedBox(width: 8),
                   Expanded(
@@ -331,8 +337,8 @@ class _TimeControl extends StatelessWidget {
                         time.format(context),
                         style: TextStyle(
                           color: enabled
-                              ? AppColors.textPrimary
-                              : AppColors.textSecondary,
+                              ? Theme.of(context).colorScheme.onSurface
+                              : Theme.of(context).colorScheme.onSurfaceVariant,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
