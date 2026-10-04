@@ -19,6 +19,11 @@ class MaintenanceProvider extends ChangeNotifier {
     return _service.getRecords(userId);
   }
 
+  /// Alias used by DashboardScreen.
+  Stream<List<MaintenanceRecord>> getUserMaintenanceRecords(String userId) {
+    return _service.getRecords(userId);
+  }
+
   Stream<MaintenanceRecord?> getRecordById(String recordId, String userId) {
     return _service.getRecordById(recordId, userId);
   }

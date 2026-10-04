@@ -11,6 +11,9 @@ import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/appliances/appliances_screen.dart';
 import '../screens/appliances/add_appliance_screen.dart';
 import '../screens/appliances/appliance_details_screen.dart';
+import '../screens/appliances/edit_appliance_screen.dart';
+import '../screens/notifications/notifications_screen.dart';
+import '../screens/notifications/notification_settings_screen.dart';
 import '../models/appliance_model.dart';
 import '../screens/reminders/reminders_screen.dart';
 import '../screens/reminders/create_reminder_screen.dart';
@@ -63,6 +66,18 @@ class AppRouter {
       GoRoute(
         path: '/forgot-password',
         builder: (context, state) => const ForgotPasswordScreen(),
+      ),
+
+      // Notifications Routes
+      GoRoute(
+        path: '/notifications',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const NotificationsScreen(),
+      ),
+      GoRoute(
+        path: '/notifications/settings',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const NotificationSettingsScreen(),
       ),
 
       // Standalone Routes pushed on top of the main navigation shell
@@ -128,6 +143,20 @@ class AppRouter {
         builder: (context, state) => const AddApplianceScreen(),
       ),
       GoRoute(
+        path: '/appliances/edit',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) {
+          if (state.extra is ApplianceModel) {
+            return EditApplianceScreen(
+              appliance: state.extra as ApplianceModel,
+            );
+          }
+          return EditApplianceScreen(
+            applianceId: state.extra is String ? state.extra as String : null,
+          );
+        },
+      ),
+      GoRoute(
         path: '/profile/edit',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const EditProfileScreen(),
@@ -166,8 +195,16 @@ class AppRouter {
               GoRoute(
                 path: 'details',
                 builder: (context, state) {
-                  final appliance = state.extra as ApplianceItem?;
-                  return ApplianceDetailsScreen(appliance: appliance);
+                  if (state.extra is ApplianceModel) {
+                    return ApplianceDetailsScreen(
+                      appliance: state.extra as ApplianceModel,
+                    );
+                  }
+                  return ApplianceDetailsScreen(
+                    applianceId: state.extra is String
+                        ? state.extra as String
+                        : null,
+                  );
                 },
               ),
             ],

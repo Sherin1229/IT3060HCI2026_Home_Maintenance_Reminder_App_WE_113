@@ -17,6 +17,12 @@ class NotificationProvider extends ChangeNotifier {
     return _service.getNotifications(userId);
   }
 
+  Stream<int> watchUnreadCount(String userId) {
+    return _service
+        .getNotifications(userId)
+        .map((list) => list.where((n) => !n.isRead).length);
+  }
+
   Stream<NotificationSettingsModel> getSettings(String userId) {
     return _service.getSettings(userId);
   }

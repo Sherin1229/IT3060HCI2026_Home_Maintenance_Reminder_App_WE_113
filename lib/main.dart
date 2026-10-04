@@ -6,6 +6,7 @@ import 'config/app_theme.dart';
 import 'utils/constants.dart';
 import 'package:provider/provider.dart';
 import 'providers/auth_provider.dart';
+import 'providers/appliance_provider.dart';
 import 'providers/reminder_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/maintenance_provider.dart';
@@ -19,6 +20,7 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => ApplianceProvider()),
         ChangeNotifierProvider(create: (_) => ReminderProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => MaintenanceProvider()),

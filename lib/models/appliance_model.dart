@@ -1,118 +1,116 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-/// Local Appliance model for UI presentation.
-/// (No Firebase/backend integration as per task requirements).
-class ApplianceItem {
+/// Firestore Appliance Model for HomiQ
+class ApplianceModel {
   final String id;
-  final String name;
+  final String userId;
+  final String applianceName;
   final String category;
   final String brand;
+  final DateTime purchaseDate;
   final String modelNumber;
   final String? serialNumber;
-  final String? purchaseDate;
-  final String
-  maintenanceType; // e.g. "Next Service", "Next Filter Clean", "Next Tub Clean"
-  final String nextMaintenanceDate;
-  final String status; // "Active", "Expiring"
-  final IconData icon;
-  final Color iconBackgroundColor;
-  final String? description;
-  final String? warrantyProvider;
-  final String? warrantyExpiry;
-  final int? filterLifePercentage;
+  final String? photoUrl;
+  final DateTime createdAt;
+  final DateTime? updatedAt;
 
-  const ApplianceItem({
+  const ApplianceModel({
     required this.id,
-    required this.name,
+    required this.userId,
+    required this.applianceName,
     required this.category,
     required this.brand,
+    required this.purchaseDate,
     required this.modelNumber,
     this.serialNumber,
-    this.purchaseDate,
-    required this.maintenanceType,
-    required this.nextMaintenanceDate,
-    required this.status,
-    required this.icon,
-    required this.iconBackgroundColor,
-    this.description,
-    this.warrantyProvider,
-    this.warrantyExpiry,
-    this.filterLifePercentage,
+    this.photoUrl,
+    required this.createdAt,
+    this.updatedAt,
   });
 
-  /// Sample mock appliances matching the project requirements & reference screenshots
-  static List<ApplianceItem> get sampleAppliances => [
-    const ApplianceItem(
-      id: 'app_1',
-      name: 'Samsung Refrigerator',
-      category: 'KITCHEN',
-      brand: 'Samsung',
-      modelNumber: 'RF28R7351SG',
-      purchaseDate: 'Oct 12, 2022',
-      maintenanceType: 'Next Service',
-      nextMaintenanceDate: 'Oct 15, 2024',
-      status: 'Active',
-      icon: Icons.kitchen_rounded,
-      iconBackgroundColor: Color(0xFFEEF2FF),
-      description: 'Samsung Family Hub 4-Door French Door',
-      warrantyProvider: 'Samsung Extended Care',
-      warrantyExpiry: 'Oct 12, 2025 (1y 6m left)',
-      filterLifePercentage: 24,
-    ),
-    const ApplianceItem(
-      id: 'app_2',
-      name: 'Bedroom AC',
-      category: 'COOLING',
-      brand: 'Daikin',
-      modelNumber: 'Daikin FTKA35',
-      purchaseDate: 'May 10, 2023',
-      maintenanceType: 'Next Filter Clean',
-      nextMaintenanceDate: 'Nov 01, 2024',
-      status: 'Active',
-      icon: Icons.ac_unit_rounded,
-      iconBackgroundColor: Color(0xFFE0F2FE),
-      description: 'Daikin Inverter Split Air Conditioner 1.5 Ton',
-      warrantyProvider: 'Daikin Protect',
-      warrantyExpiry: 'May 10, 2025',
-      filterLifePercentage: 75,
-    ),
-    const ApplianceItem(
-      id: 'app_3',
-      name: 'Washing Machine',
-      category: 'LAUNDRY',
-      brand: 'LG',
-      modelNumber: 'LG WM4000HWA',
-      purchaseDate: 'Jan 20, 2022',
-      maintenanceType: 'Next Tub Clean',
-      nextMaintenanceDate: 'Dec 10, 2024',
-      status: 'Expiring',
-      icon: Icons.local_laundry_service_rounded,
-      iconBackgroundColor: Color(0xFFEFF6FF),
-      description: 'LG Front Load Washer with TurboWash',
-      warrantyProvider: 'LG Care Shield',
-      warrantyExpiry: 'Dec 20, 2024 (Expiring soon)',
-      filterLifePercentage: 40,
-    ),
-  ];
-}
+  /// Map for creating a new document in Firestore
+  Map<String, dynamic> toCreateMap() {
+    return {
+      'userId': userId,
+      'applianceName': applianceName.trim(),
+      'category': category.trim(),
+      'brand': brand.trim(),
+      'purchaseDate': Timestamp.fromDate(purchaseDate),
+      'modelNumber': modelNumber.trim(),
+      'serialNumber': serialNumber?.trim(),
+      'photoUrl': photoUrl,
+      'createdAt': FieldValue.serverTimestamp(),
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+  }
 
-/// Maintenance task item for Appliance Details
-class MaintenanceTask {
-  final String id;
-  final String title;
-  final String description;
-  final String timeBadge; // e.g. "In 2 weeks", "Oct 2024"
-  final IconData icon;
-  final bool isWaterFilter;
-  final bool isCompleted;
+  /// Map for updating an existing document in Firestore
+  Map<String, dynamic> toUpdateMap() {
+    return {
+      'applianceName': applianceName.trim(),
+      'category': category.trim(),
+      'brand': brand.trim(),
+      'purchaseDate': Timestamp.fromDate(purchaseDate),
+      'modelNumber': modelNumber.trim(),
+      'serialNumber': serialNumber?.trim(),
+      if (photoUrl != null) 'photoUrl': photoUrl,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+  }
 
-  const MaintenanceTask({
-    required this.id,
-    required this.title,
-    required this.description,
-    required this.timeBadge,
-    required this.icon,
-    this.isWaterFilter = false,
-    this.isCompleted = false,
-  });
+  /// Construct model from Firestore document map
+  factory ApplianceModel.fromMap(String id, Map<String, dynamic> map) {
+    return ApplianceModel(
+      id: id,
+      userId: map['userId']?.toString() ?? '',
+      applianceName: map['applianceName']?.toString() ?? '',
+      category: map['category']?.toString() ?? 'Other',
+      brand: map['brand']?.toString() ?? '',
+      purchaseDate: _dateFrom(map['purchaseDate']) ?? DateTime.now(),
+      modelNumber: map['modelNumber']?.toString() ?? '',
+      serialNumber: _stringOrNull(map['serialNumber']),
+      photoUrl: _stringOrNull(map['photoUrl']),
+      createdAt: _dateFrom(map['createdAt']) ?? DateTime.now(),
+      updatedAt: _dateFrom(map['updatedAt']),
+    );
+  }
+
+  static String? _stringOrNull(dynamic value) {
+    final text = value?.toString().trim();
+    return text == null || text.isEmpty ? null : text;
+  }
+
+  static DateTime? _dateFrom(dynamic value) {
+    if (value is Timestamp) return value.toDate();
+    if (value is DateTime) return value;
+    return null;
+  }
+
+  /// Category Icon helper matching project visual guidelines
+  IconData get categoryIcon {
+    final cat = category.toLowerCase();
+    if (cat.contains('refrigerator') || cat.contains('fridge')) {
+      return Icons.kitchen_rounded;
+    }
+    if (cat.contains('ac') || cat.contains('air')) {
+      return Icons.ac_unit_rounded;
+    }
+    if (cat.contains('washing') || cat.contains('laundry')) {
+      return Icons.local_laundry_service_rounded;
+    }
+    if (cat.contains('tv') || cat.contains('television')) {
+      return Icons.tv_rounded;
+    }
+    if (cat.contains('microwave') || cat.contains('oven')) {
+      return Icons.microwave_rounded;
+    }
+    if (cat.contains('water') || cat.contains('heater')) {
+      return Icons.water_drop_rounded;
+    }
+    if (cat.contains('dishwasher')) {
+      return Icons.countertops_rounded;
+    }
+    return Icons.devices_other_rounded;
+  }
 }
