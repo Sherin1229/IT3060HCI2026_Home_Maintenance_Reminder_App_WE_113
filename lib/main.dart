@@ -9,10 +9,12 @@ import 'providers/auth_provider.dart';
 import 'providers/reminder_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/maintenance_provider.dart';
+import 'providers/theme_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  final themeProvider = await ThemeProvider.load();
   runApp(
     MultiProvider(
       providers: [
@@ -20,6 +22,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ReminderProvider()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => MaintenanceProvider()),
+        ChangeNotifierProvider.value(value: themeProvider),
       ],
       child: const MyApp(),
     ),
@@ -31,9 +34,12 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final themeProvider = context.watch<ThemeProvider?>();
     return MaterialApp.router(
       title: AppConstants.appName,
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeProvider?.themeMode ?? ThemeMode.system,
       routerConfig: AppRouter.router,
       debugShowCheckedModeBanner: false,
     );

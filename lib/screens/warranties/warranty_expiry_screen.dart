@@ -73,14 +73,11 @@ class WarrantyExpiryScreen extends StatelessWidget {
         continue;
       }
 
-      final applianceType =
-          data['applianceType']?.toString().trim() ?? '';
+      final applianceType = data['applianceType']?.toString().trim() ?? '';
 
-      final brand =
-          data['brand']?.toString().trim() ?? '';
+      final brand = data['brand']?.toString().trim() ?? '';
 
-      final model =
-          data['model']?.toString().trim() ?? '';
+      final model = data['model']?.toString().trim() ?? '';
 
       final applianceParts = <String>[
         if (brand.isNotEmpty) brand,
@@ -113,9 +110,7 @@ class WarrantyExpiryScreen extends StatelessWidget {
       );
     }
 
-    warranties.sort(
-      (a, b) => a.endDate.compareTo(b.endDate),
-    );
+    warranties.sort((a, b) => a.endDate.compareTo(b.endDate));
 
     return warranties;
   }
@@ -153,9 +148,7 @@ class WarrantyExpiryScreen extends StatelessWidget {
           stream: warrantyService.getUserWarranties(user.uid),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(
-                child: CircularProgressIndicator(),
-              );
+              return const Center(child: CircularProgressIndicator());
             }
 
             if (snapshot.hasError) {
@@ -178,20 +171,12 @@ class WarrantyExpiryScreen extends StatelessWidget {
                 AppConstants.paddingLarge,
               ),
               children: [
-                _ExpirySummaryBanner(
-                  count: warranties.length,
-                ),
-                const SizedBox(
-                  height: AppConstants.paddingMedium,
-                ),
+                _ExpirySummaryBanner(count: warranties.length),
+                const SizedBox(height: AppConstants.paddingMedium),
                 if (warranties.isEmpty)
                   const _EmptyExpiryState()
                 else
-                  for (
-                    var index = 0;
-                    index < warranties.length;
-                    index++
-                  ) ...[
+                  for (var index = 0; index < warranties.length; index++) ...[
                     _ExpiryWarrantyCard(
                       warranty: warranties[index],
                       onTap: () {
@@ -225,26 +210,22 @@ class _ExpirySummaryBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppConstants.paddingMedium),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFF7ED),
-        borderRadius: BorderRadius.circular(
-          AppConstants.borderRadiusLarge,
-        ),
-        border: Border.all(
-          color: const Color(0xFFFED7AA),
-        ),
+        color: AppColors.warningSurface(context),
+        borderRadius: BorderRadius.circular(AppConstants.borderRadiusLarge),
+        border: Border.all(color: AppColors.warningOutline(context)),
       ),
       child: Row(
         children: [
           Container(
             width: 52,
             height: 52,
-            decoration: const BoxDecoration(
-              color: Color(0xFFFFEDD5),
+            decoration: BoxDecoration(
+              color: AppColors.warningSurfaceStrong(context),
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.schedule_rounded,
-              color: Color(0xFFEA580C),
+              color: AppColors.warningText(context),
               size: 30,
             ),
           ),
@@ -256,7 +237,7 @@ class _ExpirySummaryBanner extends StatelessWidget {
                 Text(
                   '$count Warranties Expiring Soon',
                   style: theme.textTheme.bodyLarge?.copyWith(
-                    color: const Color(0xFFC2410C),
+                    color: AppColors.warningText(context),
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -278,10 +259,7 @@ class _ExpiryWarrantyCard extends StatelessWidget {
   final _ExpiringWarranty warranty;
   final VoidCallback onTap;
 
-  const _ExpiryWarrantyCard({
-    required this.warranty,
-    required this.onTap,
-  });
+  const _ExpiryWarrantyCard({required this.warranty, required this.onTap});
 
   String _formatDate(DateTime date) {
     const months = [
@@ -309,9 +287,7 @@ class _ExpiryWarrantyCard extends StatelessWidget {
     return Card(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(
-          AppConstants.borderRadiusLarge,
-        ),
+        borderRadius: BorderRadius.circular(AppConstants.borderRadiusLarge),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -320,14 +296,14 @@ class _ExpiryWarrantyCard extends StatelessWidget {
                 width: 72,
                 height: 82,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
+                  color: AppColors.neutralSurface(context),
                   borderRadius: BorderRadius.circular(
                     AppConstants.borderRadiusMedium,
                   ),
                 ),
                 child: Icon(
                   warranty.icon,
-                  color: AppColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                   size: 40,
                 ),
               ),
@@ -345,10 +321,7 @@ class _ExpiryWarrantyCard extends StatelessWidget {
                         height: 1.25,
                       ),
                     ),
-                    Text(
-                      warranty.model,
-                      style: theme.textTheme.bodyMedium,
-                    ),
+                    Text(warranty.model, style: theme.textTheme.bodyMedium),
                     const SizedBox(height: 6),
                     Container(
                       padding: const EdgeInsets.symmetric(
@@ -356,13 +329,13 @@ class _ExpiryWarrantyCard extends StatelessWidget {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFEDD5),
+                        color: AppColors.warningSurfaceStrong(context),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
                         warranty.timing,
-                        style: const TextStyle(
-                          color: Color(0xFFEA580C),
+                        style: TextStyle(
+                          color: AppColors.warningText(context),
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
                         ),
@@ -371,9 +344,7 @@ class _ExpiryWarrantyCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       'Ends ${_formatDate(warranty.endDate)}',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontSize: 12,
-                      ),
+                      style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
                     ),
                   ],
                 ),

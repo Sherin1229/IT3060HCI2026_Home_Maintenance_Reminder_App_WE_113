@@ -192,9 +192,9 @@ class _SummaryGrid extends StatelessWidget {
                     ),
                     Text(
                       label,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -237,16 +237,16 @@ class _OverviewRecordCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       record.appliance,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                     Text(
                       'Due: ${formatMaintenanceDate(record.scheduledDate)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -260,7 +260,10 @@ class _OverviewRecordCard extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+              Icon(
+                Icons.chevron_right,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ],
           ),
         ),
@@ -286,7 +289,7 @@ class _SectionEmpty extends StatelessWidget {
     padding: const EdgeInsets.only(bottom: 12),
     child: Text(
       message,
-      style: const TextStyle(color: AppColors.textSecondary),
+      style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
     ),
   );
 }

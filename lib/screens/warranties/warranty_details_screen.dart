@@ -14,7 +14,7 @@ enum _WarrantyMenuAction { edit, delete }
 
 class WarrantyDetailsScreen extends StatefulWidget {
   final String warrantyId;
-  
+
   const WarrantyDetailsScreen({super.key, required this.warrantyId});
 
   @override
@@ -153,10 +153,7 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
         builder: (dialogContext) {
           return Dialog(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(
-                maxWidth: 600,
-                maxHeight: 700,
-              ),
+              constraints: const BoxConstraints(maxWidth: 600, maxHeight: 700),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -169,17 +166,12 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
                             documentName,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(dialogContext)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                  fontWeight: FontWeight.w700,
-                                ),
+                            style: Theme.of(dialogContext).textTheme.titleMedium
+                                ?.copyWith(fontWeight: FontWeight.w700),
                           ),
                         ),
                         IconButton(
-                          onPressed: () =>
-                              Navigator.of(dialogContext).pop(),
+                          onPressed: () => Navigator.of(dialogContext).pop(),
                           icon: const Icon(Icons.close_rounded),
                           tooltip: 'Close preview',
                         ),
@@ -197,11 +189,7 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
                         child: Image.network(
                           documentUrl,
                           fit: BoxFit.contain,
-                          loadingBuilder: (
-                            context,
-                            child,
-                            loadingProgress,
-                          ) {
+                          loadingBuilder: (context, child, loadingProgress) {
                             if (loadingProgress == null) {
                               return child;
                             }
@@ -213,11 +201,7 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
                               ),
                             );
                           },
-                          errorBuilder: (
-                            context,
-                            error,
-                            stackTrace,
-                          ) {
+                          errorBuilder: (context, error, stackTrace) {
                             return const Center(
                               child: Padding(
                                 padding: EdgeInsets.all(32),
@@ -250,10 +234,7 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
     }
 
     try {
-      final opened = await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
 
       if (!opened && mounted) {
         _showMessage('Unable to open this document.');
@@ -268,11 +249,8 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
   }
 
   void _openEditWarranty() {
-    context.push(
-      '/warranties/edit',
-      extra: widget.warrantyId,
-    );
-  } 
+    context.push('/warranties/edit', extra: widget.warrantyId);
+  }
 
   Future<void> _showDeleteConfirmation() async {
     final shouldDelete = await showDialog<bool>(
@@ -288,8 +266,8 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
                 Container(
                   width: 72,
                   height: 72,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFE4E6),
+                  decoration: BoxDecoration(
+                    color: AppColors.errorSurface(context),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -308,7 +286,7 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
                 Text(
                   'Are you sure you want to delete this warranty record? This action cannot be undone.',
                   style: Theme.of(dialogContext).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -319,7 +297,7 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
                     onPressed: () => Navigator.of(dialogContext).pop(true),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.error,
-                      foregroundColor: AppColors.surface,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     ),
                     child: const Text('Delete'),
                   ),
@@ -368,18 +346,14 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
         context.go('/warranties');
 
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Warranty deleted successfully.'),
-          ),
+          const SnackBar(content: Text('Warranty deleted successfully.')),
         );
       } catch (e) {
         debugPrint('Warranty delete error: $e');
 
         if (!mounted) return;
 
-        _showMessage(
-          'Unable to delete warranty. Please try again.',
-        );
+        _showMessage('Unable to delete warranty. Please try again.');
       } finally {
         if (mounted) {
           setState(() {
@@ -407,9 +381,7 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
 
     if (user == null) {
       return const Scaffold(
-        body: Center(
-          child: Text('Please log in to view warranty details.'),
-        ),
+        body: Center(child: Text('Please log in to view warranty details.')),
       );
     }
 
@@ -457,9 +429,7 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
         stream: _warrantyService.getWarrantyById(widget.warrantyId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(),
-            );
+            return const Center(child: CircularProgressIndicator());
           }
 
           if (snapshot.hasError) {
@@ -469,9 +439,7 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
           }
 
           if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(
-              child: Text('Warranty not found.'),
-            );
+            return const Center(child: Text('Warranty not found.'));
           }
 
           final data = snapshot.data!.data();
@@ -513,75 +481,76 @@ class _WarrantyDetailsScreenState extends State<WarrantyDetailsScreen> {
             applianceType,
           ].where((value) => value != 'Not available').join(' ');
 
-          final summaryTitle =
-              applianceName.isEmpty ? 'Warranty' : applianceName;
+          final summaryTitle = applianceName.isEmpty
+              ? 'Warranty'
+              : applianceName;
 
           return SafeArea(
-        top: false,
-        child: Column(
-          children: [
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(
-                  AppConstants.paddingMedium,
-                  AppConstants.paddingSmall,
-                  AppConstants.paddingMedium,
-                  AppConstants.paddingLarge,
+            top: false,
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppConstants.paddingMedium,
+                      AppConstants.paddingSmall,
+                      AppConstants.paddingMedium,
+                      AppConstants.paddingLarge,
+                    ),
+                    child: Column(
+                      children: [
+                        _WarrantySummaryCard(
+                          appliance: summaryTitle,
+                          model: model,
+                          status: status,
+                          expiryText: expiryText,
+                          remainingText: remainingText,
+                        ),
+                        const SizedBox(height: AppConstants.paddingMedium),
+                        _WarrantyTabs(
+                          selectedTab: _selectedTab,
+                          onSelected: (tab) {
+                            setState(() => _selectedTab = tab);
+                          },
+                        ),
+                        const SizedBox(height: AppConstants.paddingMedium),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 200),
+                          child: _selectedTab == _WarrantyDetailsTab.details
+                              ? _DetailsCard(
+                                  key: const ValueKey('warranty-details'),
+                                  applianceType: applianceType,
+                                  brand: brand,
+                                  model: model,
+                                  startDate: formattedStartDate,
+                                  endDate: formattedEndDate,
+                                  provider: provider,
+                                  notes: notes,
+                                )
+                              : _DocumentsCard(
+                                  key: const ValueKey('warranty-documents'),
+                                  documentName: documentName,
+                                  documentType: documentType,
+                                  onPreview: () => _openDocumentPreview(
+                                    documentUrl: documentUrl,
+                                    documentName: documentName,
+                                  ),
+                                ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-                child: Column(
-                  children: [
-                    _WarrantySummaryCard(
-                      appliance: summaryTitle,
-                      model: model,
-                      status: status,
-                      expiryText: expiryText,
-                      remainingText: remainingText,
-                    ),
-                    const SizedBox(height: AppConstants.paddingMedium),
-                    _WarrantyTabs(
-                      selectedTab: _selectedTab,
-                      onSelected: (tab) {
-                        setState(() => _selectedTab = tab);
-                      },
-                    ),
-                    const SizedBox(height: AppConstants.paddingMedium),
-                    AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      child: _selectedTab == _WarrantyDetailsTab.details
-                          ? _DetailsCard(
-                              key: const ValueKey('warranty-details'),
-                              applianceType: applianceType,
-                              brand: brand,
-                              model: model,
-                              startDate: formattedStartDate,
-                              endDate: formattedEndDate,
-                              provider: provider,
-                              notes: notes,
-                            )
-                          : _DocumentsCard(
-                              key: const ValueKey('warranty-documents'),
-                              documentName: documentName,
-                              documentType: documentType,
-                              onPreview: () => _openDocumentPreview(
-                                documentUrl: documentUrl,
-                                documentName: documentName,
-                              ),
-                            ),
-                    ),
-                  ],
+                _BottomActions(
+                  onEdit: _openEditWarranty,
+                  onDelete: _showDeleteConfirmation,
                 ),
-              ),
+              ],
             ),
-            _BottomActions(
-              onEdit: _openEditWarranty,
-              onDelete: _showDeleteConfirmation,
-            ),
-          ],
-        ),
-      );
-    },
-  ),
-);
+          );
+        },
+      ),
+    );
   }
 }
 
@@ -614,15 +583,15 @@ class _WarrantySummaryCard extends StatelessWidget {
               width: 82,
               height: 104,
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: AppColors.neutralSurface(context),
                 borderRadius: BorderRadius.circular(
                   AppConstants.borderRadiusMedium,
                 ),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.kitchen_rounded,
                 size: 54,
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(width: AppConstants.paddingMedium),
@@ -645,7 +614,7 @@ class _WarrantySummaryCard extends StatelessWidget {
                   Text(
                     expiryText,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -666,9 +635,7 @@ class _WarrantySummaryCard extends StatelessWidget {
 class _StatusBadge extends StatelessWidget {
   final String status;
 
-  const _StatusBadge({
-    required this.status,
-  });
+  const _StatusBadge({required this.status});
 
   @override
   Widget build(BuildContext context) {
@@ -679,33 +646,30 @@ class _StatusBadge extends StatelessWidget {
     switch (status) {
       case 'Expired':
         textColor = AppColors.error;
-        backgroundColor = const Color(0xFFFFE4E6);
+        backgroundColor = AppColors.errorSurface(context);
         icon = Icons.cancel_rounded;
         break;
 
       case 'Expiring Soon':
-        textColor = const Color(0xFFD97706);
-        backgroundColor = const Color(0xFFFFF7ED);
+        textColor = AppColors.warningText(context);
+        backgroundColor = AppColors.warningSurface(context);
         icon = Icons.warning_amber_rounded;
         break;
 
       case 'Active':
         textColor = AppColors.success;
-        backgroundColor = const Color(0xFFDCFCE7);
+        backgroundColor = AppColors.successSurface(context);
         icon = Icons.check_circle_rounded;
         break;
 
       default:
-        textColor = AppColors.textSecondary;
-        backgroundColor = const Color(0xFFF1F5F9);
+        textColor = Theme.of(context).colorScheme.onSurfaceVariant;
+        backgroundColor = AppColors.neutralSurface(context);
         icon = Icons.info_outline_rounded;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 9,
-        vertical: 4,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(20),
@@ -713,11 +677,7 @@ class _StatusBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 15,
-            color: textColor,
-          ),
+          Icon(icon, size: 15, color: textColor),
           const SizedBox(width: 4),
           Text(
             status,
@@ -783,7 +743,9 @@ class _TabButton extends StatelessWidget {
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: isSelected ? AppColors.primaryBlue : AppColors.border,
+              color: isSelected
+                  ? AppColors.primaryBlue
+                  : Theme.of(context).colorScheme.outlineVariant,
               width: isSelected ? 3 : 1,
             ),
           ),
@@ -791,7 +753,9 @@ class _TabButton extends StatelessWidget {
         child: Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: isSelected ? AppColors.primaryBlue : AppColors.textSecondary,
+            color: isSelected
+                ? AppColors.primaryBlue
+                : Theme.of(context).colorScheme.onSurfaceVariant,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
           ),
         ),
@@ -880,7 +844,7 @@ class _DetailRow extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
+              color: AppColors.blueSurface(context),
               borderRadius: BorderRadius.circular(
                 AppConstants.borderRadiusSmall,
               ),
@@ -900,7 +864,7 @@ class _DetailRow extends StatelessWidget {
                 Text(
                   value,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -918,7 +882,12 @@ class _DocumentsCard extends StatelessWidget {
   final String documentType;
   final VoidCallback onPreview;
 
-  const _DocumentsCard({super.key, required this.onPreview, required this.documentName, required this.documentType});
+  const _DocumentsCard({
+    super.key,
+    required this.onPreview,
+    required this.documentName,
+    required this.documentType,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -938,19 +907,15 @@ class _DocumentsCard extends StatelessWidget {
               height: 60,
               decoration: BoxDecoration(
                 color: isPdf
-                    ? const Color(0xFFFFF1F2)
-                    : const Color(0xFFEFF6FF),
+                    ? AppColors.errorSurface(context)
+                    : AppColors.blueSurface(context),
                 borderRadius: BorderRadius.circular(
                   AppConstants.borderRadiusMedium,
                 ),
               ),
               child: Icon(
-                isPdf
-                    ? Icons.picture_as_pdf_outlined
-                    : Icons.image_outlined,
-                color: isPdf
-                    ? AppColors.error
-                    : AppColors.primaryBlue,
+                isPdf ? Icons.picture_as_pdf_outlined : Icons.image_outlined,
+                color: isPdf ? AppColors.error : AppColors.primaryBlue,
                 size: 28,
               ),
             ),
@@ -964,15 +929,12 @@ class _DocumentsCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 3),
-                  Text(
-                    documentType,
-                    style: theme.textTheme.bodyMedium,
-                  ),
+                  Text(documentType, style: theme.textTheme.bodyMedium),
                   const SizedBox(height: 8),
                   TextButton.icon(
                     onPressed: onPreview,
@@ -1009,9 +971,11 @@ class _BottomActions extends StatelessWidget {
         AppConstants.paddingMedium,
         AppConstants.paddingMedium,
       ),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
       ),
       child: Row(
         children: [

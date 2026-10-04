@@ -98,14 +98,14 @@ class _RemindersScreenState extends State<RemindersScreen> {
     }
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           context.push('/reminders/create');
         },
         tooltip: 'Create reminder',
         backgroundColor: AppColors.primaryBlue,
-        foregroundColor: AppColors.surface,
+        foregroundColor: Theme.of(context).colorScheme.onPrimary,
         shape: const CircleBorder(),
         child: const Icon(Icons.add_rounded, size: 30),
       ),
@@ -195,10 +195,10 @@ class _RemindersScreenState extends State<RemindersScreen> {
                     padding: const EdgeInsets.only(top: 48),
                     child: Column(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.notifications_none_rounded,
                           size: 56,
-                          color: AppColors.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -259,7 +259,9 @@ class _FilterChip extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Material(
-      color: isSelected ? AppColors.primaryBlue : AppColors.surface,
+      color: isSelected
+          ? AppColors.primaryBlue
+          : Theme.of(context).colorScheme.surface,
       borderRadius: BorderRadius.circular(24),
       child: InkWell(
         onTap: onSelected,
@@ -269,7 +271,9 @@ class _FilterChip extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
           decoration: BoxDecoration(
             border: Border.all(
-              color: isSelected ? AppColors.primaryBlue : AppColors.border,
+              color: isSelected
+                  ? AppColors.primaryBlue
+                  : Theme.of(context).colorScheme.outlineVariant,
             ),
             borderRadius: BorderRadius.circular(24),
           ),
@@ -277,7 +281,9 @@ class _FilterChip extends StatelessWidget {
             child: Text(
               label,
               style: theme.textTheme.bodyMedium?.copyWith(
-                color: isSelected ? AppColors.surface : AppColors.textSecondary,
+                color: isSelected
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w600,
               ),
             ),

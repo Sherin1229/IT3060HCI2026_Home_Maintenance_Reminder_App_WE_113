@@ -90,8 +90,8 @@ class _ReminderDetailsScreenState extends State<ReminderDetailsScreen> {
                 Container(
                   width: 72,
                   height: 72,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFE4E6),
+                  decoration: BoxDecoration(
+                    color: AppColors.errorSurface(context),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -110,7 +110,7 @@ class _ReminderDetailsScreenState extends State<ReminderDetailsScreen> {
                 Text(
                   'Are you sure you want to delete this reminder? This action cannot be undone.',
                   style: Theme.of(dialogContext).textTheme.bodyLarge?.copyWith(
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -121,7 +121,7 @@ class _ReminderDetailsScreenState extends State<ReminderDetailsScreen> {
                     onPressed: () => Navigator.of(dialogContext).pop(true),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.error,
-                      foregroundColor: AppColors.surface,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     ),
                     child: const Text('Delete'),
                   ),
@@ -287,7 +287,7 @@ class _DetailsBody extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(AppConstants.paddingMedium),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
+                    color: AppColors.neutralSurface(context),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
@@ -329,10 +329,10 @@ class _SummaryCard extends StatelessWidget {
         ? AppColors.success
         : AppColors.primaryBlue;
     final statusBackground = status == 'Overdue'
-        ? const Color(0xFFFEE2E2)
+        ? AppColors.errorSurface(context)
         : status == 'Completed'
-        ? const Color(0xFFDCFCE7)
-        : const Color(0xFFDBEAFE);
+        ? AppColors.successSurface(context)
+        : Theme.of(context).colorScheme.primaryContainer;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(AppConstants.paddingMedium),
@@ -342,7 +342,7 @@ class _SummaryCard extends StatelessWidget {
               width: 72,
               height: 72,
               decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
+                color: AppColors.blueSurface(context),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -363,10 +363,10 @@ class _SummaryCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.location_on_outlined,
                         size: 18,
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                       const SizedBox(width: 4),
                       Expanded(
@@ -464,7 +464,7 @@ class _DetailRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: AppColors.primaryDark, size: 24),
+          Icon(icon, color: Theme.of(context).colorScheme.primary, size: 24),
           const SizedBox(width: 18),
           Expanded(
             flex: 3,
@@ -477,7 +477,7 @@ class _DetailRow extends StatelessWidget {
               value,
               textAlign: TextAlign.right,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppColors.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -507,9 +507,11 @@ class _DetailActions extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.border)),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
       ),
       child: Column(
         children: [

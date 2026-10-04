@@ -12,17 +12,17 @@ class MaintenanceStatusPill extends StatelessWidget {
       MaintenanceStatus.completed => (
         'Completed',
         AppColors.success,
-        const Color(0xFFE9F9EF),
+        AppColors.successSurface(context),
       ),
       MaintenanceStatus.upcoming => (
         'Upcoming',
         AppColors.primaryBlue,
-        const Color(0xFFEAF2FF),
+        AppColors.blueSurface(context),
       ),
       MaintenanceStatus.overdue => (
         'Overdue',
         AppColors.error,
-        const Color(0xFFFFECEF),
+        AppColors.errorSurface(context),
       ),
     };
     return Container(
@@ -54,10 +54,14 @@ class MaintenanceIcon extends StatelessWidget {
       height: size,
       width: size,
       decoration: BoxDecoration(
-        color: const Color(0xFFF1F5F9),
+        color: AppColors.neutralSurface(context),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Icon(icon, color: AppColors.textPrimary, size: size * .48),
+      child: Icon(
+        icon,
+        color: Theme.of(context).colorScheme.onSurface,
+        size: size * .48,
+      ),
     );
   }
 }
@@ -85,25 +89,25 @@ class MaintenanceRecordTile extends StatelessWidget {
                   children: [
                     Text(
                       record.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       record.appliance,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       formatMaintenanceDate(record.scheduledDate),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 11,
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ],
@@ -111,7 +115,10 @@ class MaintenanceRecordTile extends StatelessWidget {
               ),
               MaintenanceStatusPill(status: record.status),
               const SizedBox(width: 4),
-              const Icon(Icons.chevron_right, color: AppColors.textSecondary),
+              Icon(
+                Icons.chevron_right,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ],
           ),
         ),

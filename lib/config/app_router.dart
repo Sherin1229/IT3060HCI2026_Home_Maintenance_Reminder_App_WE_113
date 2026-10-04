@@ -22,6 +22,10 @@ import '../screens/maintenance_history/maintenance_form_screen.dart';
 import '../screens/maintenance_history/maintenance_overview_screen.dart';
 import '../screens/maintenance_history/maintenance_record_details_screen.dart';
 import '../screens/profile/profile_screen.dart';
+import '../screens/profile/edit_profile_screen.dart';
+import '../screens/profile/change_password_screen.dart';
+import '../screens/profile/help_support_screen.dart';
+import '../screens/profile/about_homiq_screen.dart';
 
 /// Centralized Router for HomiQ
 /// Defines routing hierarchy using GoRouter.
@@ -122,6 +126,26 @@ class AppRouter {
         path: '/appliances/add',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const AddApplianceScreen(),
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/profile/change-password',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ChangePasswordScreen(),
+      ),
+      GoRoute(
+        path: '/profile/help',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const HelpSupportScreen(),
+      ),
+      GoRoute(
+        path: '/profile/about',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AboutHomiQScreen(),
       ),
 
       // Main Navigation Shell (includes the persistent BottomNavigationBar)

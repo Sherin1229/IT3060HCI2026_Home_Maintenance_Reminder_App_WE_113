@@ -43,9 +43,11 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text(
+              child: Text(
                 'Cancel',
-                style: TextStyle(color: AppColors.textSecondary),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
             ElevatedButton(
@@ -78,9 +80,9 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(
@@ -100,9 +102,9 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
         centerTitle: true,
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(
+            icon: Icon(
               Icons.more_vert_rounded,
-              color: AppColors.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             onSelected: (value) {
               if (value == 'delete') {
@@ -117,28 +119,28 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'Edit Details',
                 child: Row(
                   children: [
                     Icon(
                       Icons.edit_outlined,
                       size: 18,
-                      color: AppColors.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     SizedBox(width: 8),
                     Text('Edit Details'),
                   ],
                 ),
               ),
-              const PopupMenuItem(
+              PopupMenuItem(
                 value: 'Share',
                 child: Row(
                   children: [
                     Icon(
                       Icons.share_outlined,
                       size: 18,
-                      color: AppColors.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                     SizedBox(width: 8),
                     Text('Share Details'),
@@ -200,9 +202,9 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
   Widget _buildMainApplianceCard(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         boxShadow: const [
           BoxShadow(
             color: Color(0x05000000),
@@ -222,7 +224,7 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
-                color: const Color(0xFFF1F5F9),
+                color: AppColors.neutralSurface(context),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
@@ -231,7 +233,7 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                   children: [
                     // Mock Refrigerator Illustration Graphic
                     Container(
-                      color: const Color(0xFFE2E8F0),
+                      color: Theme.of(context).colorScheme.outlineVariant,
                       child: Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -249,12 +251,14 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                               ),
                             ),
                             const SizedBox(height: 8),
-                            const Text(
+                            Text(
                               'Smart Refrigerator Illustration',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: AppColors.textSecondary,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -273,10 +277,10 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
               children: [
                 Text(
                   _item.category.toUpperCase(),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     letterSpacing: 1.0,
                   ),
                 ),
@@ -286,7 +290,7 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                     vertical: 5,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF), // Light blue tint
+                    color: AppColors.blueSurface(context), // Light blue tint
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Row(
@@ -315,19 +319,19 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
             // Title & Description
             Text(
               _item.name,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
                 letterSpacing: -0.3,
               ),
             ),
             const SizedBox(height: 4),
             Text(
               _item.description ?? 'Samsung Family Hub 4-Door French Door',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 14,
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 16),
@@ -428,8 +432,10 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF1F5F9),
-                        foregroundColor: AppColors.textPrimary,
+                        backgroundColor: AppColors.neutralSurface(context),
+                        foregroundColor: Theme.of(
+                          context,
+                        ).colorScheme.onSurface,
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         shape: RoundedRectangleBorder(
@@ -456,7 +462,7 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                   child: IconButton(
                     onPressed: _showDeleteConfirmationDialog,
                     style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFFFEF2F2),
+                      backgroundColor: AppColors.errorSurface(context),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -482,9 +488,9 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         boxShadow: const [
           BoxShadow(
             color: Color(0x05000000),
@@ -497,7 +503,7 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            children: const [
+            children: [
               Icon(Icons.tune_rounded, color: AppColors.primaryBlue, size: 22),
               SizedBox(width: 8),
               Text(
@@ -505,21 +511,21 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
 
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
+            children: [
               Text(
                 'Water Filter',
                 style: TextStyle(
                   fontSize: 14,
-                  color: AppColors.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -528,7 +534,7 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -541,7 +547,7 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
             child: LinearProgressIndicator(
               value: filterPercent / 100.0,
               minHeight: 8,
-              backgroundColor: const Color(0xFFE2E8F0),
+              backgroundColor: Theme.of(context).colorScheme.outlineVariant,
               valueColor: const AlwaysStoppedAnimation<Color>(
                 Color(0xFFEAB308),
               ), // Warning Amber
@@ -549,11 +555,14 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
           ),
           const SizedBox(height: 6),
 
-          const Align(
+          Align(
             alignment: Alignment.centerRight,
             child: Text(
               'Replace soon',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              style: TextStyle(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           const SizedBox(height: 14),
@@ -572,7 +581,9 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
               },
               style: OutlinedButton.styleFrom(
                 foregroundColor: AppColors.primaryBlue,
-                side: const BorderSide(color: AppColors.border),
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -593,9 +604,9 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         boxShadow: const [
           BoxShadow(
             color: Color(0x05000000),
@@ -613,7 +624,7 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
             child: Icon(
               Icons.verified_rounded,
               size: 80,
-              color: const Color(0xFFF1F5F9).withAlpha(200),
+              color: AppColors.neutralSurface(context).withAlpha(200),
             ),
           ),
 
@@ -621,7 +632,7 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                children: const [
+                children: [
                   Icon(
                     Icons.shield_outlined,
                     color: AppColors.primaryBlue,
@@ -633,7 +644,7 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                     style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ],
@@ -651,10 +662,10 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
               const SizedBox(height: 2),
               Text(
                 _item.warrantyExpiry ?? 'Oct 12, 2025 (1y 6m left)',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 16),
@@ -672,7 +683,7 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF1F5F9),
+                    backgroundColor: AppColors.neutralSurface(context),
                     foregroundColor: AppColors.primaryBlue,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -697,9 +708,9 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         boxShadow: const [
           BoxShadow(
             color: Color(0x05000000),
@@ -721,7 +732,10 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
               _buildTabItem(2, 'Manuals'),
             ],
           ),
-          const Divider(height: 1, color: AppColors.border),
+          Divider(
+            height: 1,
+            color: Theme.of(context).colorScheme.outlineVariant,
+          ),
           const SizedBox(height: 16),
 
           // Tab Content
@@ -752,7 +766,7 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                 fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
                 color: isSelected
                     ? AppColors.primaryBlue
-                    : AppColors.textSecondary,
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ),
@@ -780,8 +794,8 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                   Container(
                     width: 36,
                     height: 36,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE0F2FE),
+                    decoration: BoxDecoration(
+                      color: AppColors.blueSurface(context),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -791,7 +805,10 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                     ),
                   ),
                   Expanded(
-                    child: Container(width: 2, color: const Color(0xFFE2E8F0)),
+                    child: Container(
+                      width: 2,
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
                   ),
                 ],
               ),
@@ -803,9 +820,11 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                   margin: const EdgeInsets.only(bottom: 16),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
+                    color: Theme.of(context).scaffoldBackgroundColor,
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -813,12 +832,12 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
+                          Text(
                             'Replace Water Filter',
                             style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                           Container(
@@ -827,7 +846,7 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                               vertical: 3,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFEFF6FF),
+                              color: AppColors.blueSurface(context),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Text(
@@ -842,11 +861,11 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                         ],
                       ),
                       const SizedBox(height: 6),
-                      const Text(
+                      Text(
                         'Model HAF-QIN/EXP needed.\nLast replaced 5 months ago.',
                         style: TextStyle(
                           fontSize: 13,
-                          color: AppColors.textSecondary,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
                           height: 1.3,
                         ),
                       ),
@@ -868,7 +887,9 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                           );
                         },
                         child: Text(
-                          _item1Completed ? 'Completed ✓' : 'Mark Complete',
+                          _item1Completed
+                              ? 'Completed Ã¢Å“â€œ'
+                              : 'Mark Complete',
                           style: TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.bold,
@@ -893,14 +914,14 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
             Container(
               width: 36,
               height: 36,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF1F5F9),
+              decoration: BoxDecoration(
+                color: AppColors.neutralSurface(context),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.cleaning_services_outlined,
                 size: 18,
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(width: 12),
@@ -909,40 +930,44 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: Theme.of(context).scaffoldBackgroundColor,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
+                      children: [
                         Text(
                           'Deep Clean Coils',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
                         Text(
                           'Oct 2024',
                           style: TextStyle(
                             fontSize: 12,
-                            color: AppColors.textSecondary,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 6),
-                    const Text(
+                    Text(
                       'Annual maintenance to ensure cooling efficiency.',
                       style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                         height: 1.3,
                       ),
                     ),
@@ -958,19 +983,22 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
 
   Widget _buildHistoryTab(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      padding: EdgeInsets.symmetric(vertical: 24.0),
       child: Center(
         child: Column(
-          children: const [
+          children: [
             Icon(
               Icons.history_toggle_off_rounded,
               size: 40,
-              color: AppColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             SizedBox(height: 8),
             Text(
               'No maintenance history recorded yet',
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -980,19 +1008,22 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
 
   Widget _buildManualsTab(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24.0),
+      padding: EdgeInsets.symmetric(vertical: 24.0),
       child: Center(
         child: Column(
-          children: const [
+          children: [
             Icon(
               Icons.description_outlined,
               size: 40,
-              color: AppColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
             SizedBox(height: 8),
             Text(
               'No user manuals or guides uploaded',
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+              style: TextStyle(
+                fontSize: 14,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -1003,9 +1034,9 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
   Widget _buildGridLabel(String label) {
     return Text(
       label,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 12,
-        color: AppColors.textSecondary,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
         fontWeight: FontWeight.w500,
       ),
     );
@@ -1014,10 +1045,10 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
   Widget _buildGridValue(String value) {
     return Text(
       value,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 15,
         fontWeight: FontWeight.bold,
-        color: AppColors.textPrimary,
+        color: Theme.of(context).colorScheme.onSurface,
       ),
     );
   }

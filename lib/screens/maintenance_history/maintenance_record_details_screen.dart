@@ -73,7 +73,9 @@ class _DetailsView extends StatelessWidget {
           Center(
             child: Text(
               record.appliance,
-              style: const TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             ),
           ),
           const SizedBox(height: 10),
@@ -99,15 +101,20 @@ class _DetailsView extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             record.notes ?? 'No notes added.',
-            style: const TextStyle(color: AppColors.textSecondary, height: 1.5),
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 22),
           const Text('Photos', style: TextStyle(fontWeight: FontWeight.w700)),
           const SizedBox(height: 10),
           if (record.photoUrls.isEmpty)
-            const Text(
+            Text(
               'No photos attached.',
-              style: TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
             )
           else
             SizedBox(
@@ -183,15 +190,20 @@ class _DetailRow extends StatelessWidget {
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(color: AppColors.textSecondary)),
+        Text(
+          label,
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
         const SizedBox(width: 16),
         Flexible(
           child: Text(
             value,
             textAlign: TextAlign.end,
-            style: const TextStyle(
+            style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
         ),
@@ -231,10 +243,10 @@ class _PhotoThumbnail extends StatelessWidget {
           errorBuilder: (_, _, _) => Container(
             height: 76,
             width: 76,
-            color: const Color(0xFFF1F5F9),
-            child: const Icon(
+            color: AppColors.neutralSurface(context),
+            child: Icon(
               Icons.broken_image_outlined,
-              color: AppColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
         ),
