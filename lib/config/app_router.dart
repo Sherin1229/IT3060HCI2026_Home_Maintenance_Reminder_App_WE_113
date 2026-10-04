@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 // Import screens
+import '../screens/splash/splash_screen.dart';
+import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/signup_screen.dart';
 import '../screens/auth/forgot_password_screen.dart';
@@ -16,7 +18,14 @@ import '../screens/warranties/warranties_screen.dart';
 import '../screens/warranties/add_warranty_screen.dart';
 import '../screens/warranties/add_warranty_document_screen.dart';
 import '../screens/maintenance_history/maintenance_history_screen.dart';
+import '../screens/maintenance_history/maintenance_form_screen.dart';
+import '../screens/maintenance_history/maintenance_overview_screen.dart';
+import '../screens/maintenance_history/maintenance_record_details_screen.dart';
 import '../screens/profile/profile_screen.dart';
+import '../screens/profile/edit_profile_screen.dart';
+import '../screens/profile/change_password_screen.dart';
+import '../screens/profile/help_support_screen.dart';
+import '../screens/profile/about_homiq_screen.dart';
 
 /// Centralized Router for HomiQ
 /// Defines routing hierarchy using GoRouter.
@@ -31,10 +40,20 @@ class AppRouter {
       GlobalKey<NavigatorState>();
 
   static final GoRouter router = GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/splash',
     navigatorKey: _rootNavigatorKey,
     debugLogDiagnostics: true,
     routes: [
+      // Splash and Onboarding Routes
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+
       // Authentication Routes (outside the shell layout)
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
@@ -48,9 +67,44 @@ class AppRouter {
 
       // Standalone Routes pushed on top of the main navigation shell
       GoRoute(
+        path: '/maintenance',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const MaintenanceOverviewScreen(),
+      ),
+      GoRoute(
         path: '/maintenance-history',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const MaintenanceHistoryScreen(),
+      ),
+      GoRoute(
+        path: '/maintenance/history',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const MaintenanceHistoryScreen(),
+      ),
+      GoRoute(
+        path: '/maintenance/add',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => MaintenanceFormScreen(
+          mode: state.extra is String
+              ? MaintenanceFormMode.edit
+              : MaintenanceFormMode.add,
+          recordId: state.extra is String ? state.extra as String : null,
+        ),
+      ),
+      GoRoute(
+        path: '/maintenance/complete',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => MaintenanceFormScreen(
+          mode: MaintenanceFormMode.complete,
+          recordId: state.extra is String ? state.extra as String : null,
+        ),
+      ),
+      GoRoute(
+        path: '/maintenance/details',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => MaintenanceRecordDetailsScreen(
+          recordId: state.extra is String ? state.extra as String : null,
+        ),
       ),
       GoRoute(
         path: '/add-warranty',
@@ -72,6 +126,26 @@ class AppRouter {
         path: '/appliances/add',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const AddApplianceScreen(),
+      ),
+      GoRoute(
+        path: '/profile/edit',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const EditProfileScreen(),
+      ),
+      GoRoute(
+        path: '/profile/change-password',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ChangePasswordScreen(),
+      ),
+      GoRoute(
+        path: '/profile/help',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const HelpSupportScreen(),
+      ),
+      GoRoute(
+        path: '/profile/about',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const AboutHomiQScreen(),
       ),
 
       // Main Navigation Shell (includes the persistent BottomNavigationBar)

@@ -70,12 +70,12 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'Filter Appliances',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
                       IconButton(
@@ -85,12 +85,12 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  const Text(
+                  Text(
                     'Status',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -105,7 +105,7 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                         labelStyle: TextStyle(
                           color: isSelected
                               ? AppColors.primaryBlue
-                              : AppColors.textPrimary,
+                              : Theme.of(context).colorScheme.onSurface,
                           fontWeight: isSelected
                               ? FontWeight.bold
                               : FontWeight.normal,
@@ -148,7 +148,7 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Stack(
           children: [
@@ -165,20 +165,20 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'My Appliances',
                         style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primaryDark,
+                          color: Theme.of(context).colorScheme.primary,
                           letterSpacing: -0.5,
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(
+                        icon: Icon(
                           Icons.notifications_none_rounded,
                           size: 26,
-                          color: AppColors.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                         ),
                         onPressed: () {
                           ScaffoldMessenger.of(context).showSnackBar(
@@ -206,21 +206,29 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                         child: Container(
                           height: 48,
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.border),
+                            border: Border.all(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.outlineVariant,
+                            ),
                           ),
                           child: TextField(
                             controller: _searchController,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               hintText: 'Search appliances...',
                               hintStyle: TextStyle(
-                                color: AppColors.textSecondary,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                                 fontSize: 14,
                               ),
                               prefixIcon: Icon(
                                 Icons.search,
-                                color: AppColors.textSecondary,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                                 size: 20,
                               ),
                               border: InputBorder.none,
@@ -242,15 +250,19 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                           height: 48,
                           width: 48,
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.border),
+                            border: Border.all(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.outlineVariant,
+                            ),
                           ),
                           child: Icon(
                             Icons.tune_rounded,
                             color: _selectedStatusFilter != 'All'
                                 ? AppColors.primaryBlue
-                                : AppColors.textPrimary,
+                                : Theme.of(context).colorScheme.onSurface,
                             size: 22,
                           ),
                         ),
@@ -269,15 +281,19 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                               Icon(
                                 Icons.search_off_rounded,
                                 size: 48,
-                                color: AppColors.textSecondary.withAlpha(128),
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant.withAlpha(128),
                               ),
                               const SizedBox(height: 12),
-                              const Text(
+                              Text(
                                 'No appliances found',
                                 style: TextStyle(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
-                                  color: AppColors.textSecondary,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.onSurfaceVariant,
                                 ),
                               ),
                             ],
@@ -330,9 +346,9 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
     return Container(
       margin: const EdgeInsets.only(bottom: 14.0),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         boxShadow: const [
           BoxShadow(
             color: Color(0x05000000),
@@ -349,7 +365,9 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
             right: 0,
             child: CustomPaint(
               size: const Size(80, 80),
-              painter: _CardCornerPainter(),
+              painter: _CardCornerPainter(
+                Theme.of(context).colorScheme.surfaceContainerHighest,
+              ),
             ),
           ),
 
@@ -371,7 +389,9 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                         height: 50,
                         width: 50,
                         decoration: BoxDecoration(
-                          color: appliance.iconBackgroundColor,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Theme.of(context).colorScheme.primaryContainer
+                              : appliance.iconBackgroundColor,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Icon(
@@ -389,19 +409,21 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                           children: [
                             Text(
                               appliance.name,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
+                                color: Theme.of(context).colorScheme.onSurface,
                                 letterSpacing: -0.2,
                               ),
                             ),
                             const SizedBox(height: 2),
                             Text(
                               'Model: ${appliance.modelNumber}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 13,
-                                color: AppColors.textSecondary,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
                               ),
                             ),
                           ],
@@ -421,19 +443,21 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                         children: [
                           Text(
                             appliance.maintenanceType,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: AppColors.textSecondary,
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             appliance.nextMaintenanceDate,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
+                              color: Theme.of(context).colorScheme.onSurface,
                             ),
                           ),
                         ],
@@ -447,8 +471,10 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                         ),
                         decoration: BoxDecoration(
                           color: isActive
-                              ? const Color(0xFFDCFCE7) // Light green
-                              : const Color(0xFFFEF3C7), // Light yellow/orange
+                              ? AppColors.successSurface(context) // Light green
+                              : AppColors.warningSurface(
+                                  context,
+                                ), // Light yellow/orange
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Row(
@@ -491,10 +517,14 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
 
 /// Subtle decorative corner painter for cards matching screenshot design
 class _CardCornerPainter extends CustomPainter {
+  const _CardCornerPainter(this.color);
+
+  final Color color;
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFFF1F5F9).withAlpha(180)
+      ..color = color.withAlpha(180)
       ..style = PaintingStyle.fill;
 
     final path = Path()

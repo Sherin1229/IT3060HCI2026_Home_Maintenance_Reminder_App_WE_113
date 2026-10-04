@@ -34,54 +34,48 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   }
 
   Future<void> _resetPassword() async {
-  final email = _emailController.text.trim();
+    final email = _emailController.text.trim();
 
-  if (email.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Please enter your email address.'),
-      ),
-    );
-    return;
-  }
+    if (email.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter your email address.')),
+      );
+      return;
+    }
 
-  final authProvider = context.read<AuthProvider>();
+    final authProvider = context.read<AuthProvider>();
 
-  final success = await authProvider.resetPassword(
-    email: email,
-  );
+    final success = await authProvider.resetPassword(email: email);
 
-  if (!mounted) return;
+    if (!mounted) return;
 
-  if (success) {
-    _emailController.clear();
+    if (success) {
+      _emailController.clear();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Password reset link has been sent to your email.',
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Password reset link has been sent to your email.'),
         ),
-      ),
-    );
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          authProvider.errorMessage ??
-              'Failed to send reset link. Please try again.',
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            authProvider.errorMessage ??
+                'Failed to send reset link. Please try again.',
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
-}
 
   @override
-Widget build(BuildContext context) {
-  final theme = Theme.of(context);
-  final authProvider = context.watch<AuthProvider>();
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final authProvider = context.watch<AuthProvider>();
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -114,8 +108,8 @@ Widget build(BuildContext context) {
                         Container(
                           width: 156,
                           height: 156,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFEFF6FF),
+                          decoration: BoxDecoration(
+                            color: AppColors.blueSurface(context),
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -123,7 +117,7 @@ Widget build(BuildContext context) {
                           width: 92,
                           height: 92,
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(
                               AppConstants.borderRadiusLarge,
                             ),
@@ -151,14 +145,14 @@ Widget build(BuildContext context) {
                               color: AppColors.secondaryTeal,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: AppColors.surface,
+                                color: Theme.of(context).colorScheme.surface,
                                 width: 4,
                               ),
                             ),
-                            child: const Icon(
+                            child: Icon(
                               Icons.mail_outline_rounded,
                               size: 23,
-                              color: AppColors.surface,
+                              color: Theme.of(context).colorScheme.onPrimary,
                             ),
                           ),
                         ),
@@ -171,7 +165,7 @@ Widget build(BuildContext context) {
               Text(
                 'Forgot Password?',
                 style: theme.textTheme.headlineMedium?.copyWith(
-                  color: AppColors.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
@@ -180,7 +174,7 @@ Widget build(BuildContext context) {
               Text(
                 "Enter the email address associated with your HomiQ account and we'll send you a link to reset your password.",
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -207,7 +201,7 @@ Widget build(BuildContext context) {
                     child: Text(
                       'Remember your password? ',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),

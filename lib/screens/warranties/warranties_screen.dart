@@ -24,6 +24,7 @@ enum _ApplianceType {
 enum _WarrantySort { expiryEarliest, expiryLatest }
 
 class _WarrantyItem {
+  final String warrantyId;
   final String appliance;
   final String model;
   final _WarrantyStatus status;
@@ -33,6 +34,7 @@ class _WarrantyItem {
   final IconData icon;
 
   const _WarrantyItem({
+    required this.warrantyId,
     required this.appliance,
     required this.model,
     required this.status,
@@ -138,6 +140,7 @@ class _WarrantiesScreenState extends State<WarrantiesScreen> {
       final year = expiryDate.year;
 
       return _WarrantyItem(
+        warrantyId: document.id,
         appliance: '$brand $applianceTypeName'.trim(),
         model: model,
         status: status,
@@ -176,9 +179,7 @@ class _WarrantiesScreenState extends State<WarrantiesScreen> {
     super.dispose();
   }
 
-  List<_WarrantyItem> _getVisibleWarranties(
-    List<_WarrantyItem> warranties,
-  ) {
+  List<_WarrantyItem> _getVisibleWarranties(List<_WarrantyItem> warranties) {
     final normalizedQuery = _searchQuery.trim().toLowerCase();
     final today = DateUtils.dateOnly(DateTime.now());
 
@@ -191,8 +192,7 @@ class _WarrantiesScreenState extends State<WarrantiesScreen> {
       final matchesStatus = switch (_selectedFilter) {
         _WarrantyFilter.all => true,
         _WarrantyFilter.active => item.status == _WarrantyStatus.active,
-        _WarrantyFilter.expiring =>
-          item.status == _WarrantyStatus.expiringSoon,
+        _WarrantyFilter.expiring => item.status == _WarrantyStatus.expiringSoon,
         _WarrantyFilter.expired => item.status == _WarrantyStatus.expired,
       };
 
@@ -200,8 +200,9 @@ class _WarrantiesScreenState extends State<WarrantiesScreen> {
           _selectedApplianceType == _ApplianceType.all ||
           item.applianceType == _selectedApplianceType;
 
-      final daysUntilExpiry =
-          DateUtils.dateOnly(item.expiryDate).difference(today).inDays;
+      final daysUntilExpiry = DateUtils.dateOnly(
+        item.expiryDate,
+      ).difference(today).inDays;
 
       final matchesExpiryPeriod = switch (_selectedExpiryPeriod) {
         _ExpiryPeriod.anyTime => true,
@@ -241,7 +242,7 @@ class _WarrantiesScreenState extends State<WarrantiesScreen> {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       clipBehavior: Clip.antiAlias,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
@@ -268,25 +269,13 @@ class _WarrantiesScreenState extends State<WarrantiesScreen> {
     });
   }
 
-  void _showComingSoonMessage(String message) {
-    final messenger = ScaffoldMessenger.of(context);
-
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(content: Text(message)),
-      );
-  }
-
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
 
     if (user == null) {
       return const Scaffold(
-        body: Center(
-          child: Text('Please log in to view your warranties.'),
-        ),
+        body: Center(child: Text('Please log in to view your warranties.')),
       );
     }
 
@@ -295,17 +284,13 @@ class _WarrantiesScreenState extends State<WarrantiesScreen> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
 
         if (snapshot.hasError) {
           return const Scaffold(
-            body: Center(
-              child: Text('Unable to load warranties.'),
-            ),
+            body: Center(child: Text('Unable to load warranties.')),
           );
         }
 
@@ -315,20 +300,8 @@ class _WarrantiesScreenState extends State<WarrantiesScreen> {
 
         final visibleWarranties = _getVisibleWarranties(warranties);
 
-        final activeCount = warranties
-            .where((item) => item.status == _WarrantyStatus.active)
-            .length;
-
-        final expiringCount = warranties
-            .where((item) => item.status == _WarrantyStatus.expiringSoon)
-            .length;
-
-        final expiredCount = warranties
-            .where((item) => item.status == _WarrantyStatus.expired)
-            .length;
-
         return Scaffold(
-          backgroundColor: AppColors.background,
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           appBar: AppBar(
             titleSpacing: AppConstants.paddingMedium,
             title: const Row(
@@ -366,65 +339,9 @@ class _WarrantiesScreenState extends State<WarrantiesScreen> {
 
                 const SizedBox(height: AppConstants.paddingMedium),
 
-                if (expiringCount > 0) ...[
-                  _ExpiryAlertCard(
-                    count: expiringCount,
-                    onTap: () {
-                      setState(
-                        () => _selectedFilter = _WarrantyFilter.expiring,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: AppConstants.paddingMedium),
-                ],
-
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      _WarrantyFilterChip(
-                        label: 'All (${warranties.length})',
-                        isSelected: _selectedFilter == _WarrantyFilter.all,
-                        onSelected: () {
-                          setState(
-                            () => _selectedFilter = _WarrantyFilter.all,
-                          );
-                        },
-                      ),
-                      const SizedBox(width: AppConstants.paddingSmall),
-                      _WarrantyFilterChip(
-                        label: 'Active ($activeCount)',
-                        isSelected: _selectedFilter == _WarrantyFilter.active,
-                        onSelected: () {
-                          setState(
-                            () => _selectedFilter = _WarrantyFilter.active,
-                          );
-                        },
-                      ),
-                      const SizedBox(width: AppConstants.paddingSmall),
-                      _WarrantyFilterChip(
-                        label: 'Expiring ($expiringCount)',
-                        isSelected: _selectedFilter == _WarrantyFilter.expiring,
-                        onSelected: () {
-                          setState(
-                            () => _selectedFilter = _WarrantyFilter.expiring,
-                          );
-                        },
-                      ),
-                      const SizedBox(width: AppConstants.paddingSmall),
-                      _WarrantyFilterChip(
-                        label: 'Expired ($expiredCount)',
-                        isSelected: _selectedFilter == _WarrantyFilter.expired,
-                        onSelected: () {
-                          setState(
-                            () => _selectedFilter = _WarrantyFilter.expired,
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+                _ExpiryInformationCard(
+                  onTap: () => context.push('/warranties/expiry'),
                 ),
-
                 const SizedBox(height: AppConstants.paddingMedium),
 
                 if (warranties.isEmpty)
@@ -444,8 +361,9 @@ class _WarrantiesScreenState extends State<WarrantiesScreen> {
                     _WarrantyCard(
                       warranty: visibleWarranties[index],
                       onTap: () {
-                        _showComingSoonMessage(
-                          'Warranty details will be available soon.',
+                        context.push(
+                          '/warranties/details',
+                          extra: visibleWarranties[index].warrantyId,
                         );
                       },
                     ),
@@ -521,7 +439,7 @@ class _WarrantySearchBar extends StatelessWidget {
             Material(
               color: hasActiveFilters
                   ? AppColors.primaryBlue
-                  : const Color(0xFFDBEAFE),
+                  : Theme.of(context).colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(
                 AppConstants.borderRadiusMedium,
               ),
@@ -529,7 +447,7 @@ class _WarrantySearchBar extends StatelessWidget {
                 onPressed: onFilterPressed,
                 tooltip: 'Filter warranties',
                 color: hasActiveFilters
-                    ? AppColors.surface
+                    ? Theme.of(context).colorScheme.onPrimary
                     : AppColors.primaryBlue,
                 icon: const Icon(Icons.tune_rounded),
               ),
@@ -545,7 +463,7 @@ class _WarrantySearchBar extends StatelessWidget {
                     color: AppColors.secondaryTeal,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: AppColors.surface,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       width: 2,
                     ),
                   ),
@@ -558,48 +476,34 @@ class _WarrantySearchBar extends StatelessWidget {
   }
 }
 
-class _ExpiryAlertCard extends StatelessWidget {
-  final int count;
+class _ExpiryInformationCard extends StatelessWidget {
   final VoidCallback onTap;
 
-  const _ExpiryAlertCard({
-    required this.count,
-    required this.onTap,
-  });
+  const _ExpiryInformationCard({required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
     return Material(
-      color: const Color(0xFFFFF7ED),
-      borderRadius: BorderRadius.circular(
-        AppConstants.borderRadiusLarge,
-      ),
+      color: AppColors.warningSurface(context),
+      borderRadius: BorderRadius.circular(AppConstants.borderRadiusLarge),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(
-          AppConstants.borderRadiusLarge,
-        ),
+        borderRadius: BorderRadius.circular(AppConstants.borderRadiusLarge),
         child: Container(
-          padding: const EdgeInsets.all(
-            AppConstants.paddingMedium,
-          ),
+          padding: const EdgeInsets.all(AppConstants.paddingMedium),
           decoration: BoxDecoration(
-            border: Border.all(
-              color: const Color(0xFFFED7AA),
-            ),
-            borderRadius: BorderRadius.circular(
-              AppConstants.borderRadiusLarge,
-            ),
+            border: Border.all(color: AppColors.warningOutline(context)),
+            borderRadius: BorderRadius.circular(AppConstants.borderRadiusLarge),
           ),
           child: Row(
             children: [
               Container(
                 width: 44,
                 height: 44,
-                decoration: const BoxDecoration(
-                  color: Color(0xFFFFEDD5),
+                decoration: BoxDecoration(
+                  color: AppColors.warningSurfaceStrong(context),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -613,80 +517,27 @@ class _ExpiryAlertCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '$count ${count == 1 ? 'Warranty' : 'Warranties'} Expiring Soon',
+                      'Warranty Expiry Information',
                       style: theme.textTheme.bodyLarge?.copyWith(
-                        color: const Color(0xFF9A3412),
+                        color: AppColors.warningText(context),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'View expiry details',
+                      'View warranties that are expiring soon',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: const Color(0xFFC2410C),
+                        color: AppColors.warningText(context),
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: Color(0xFFC2410C),
+                color: AppColors.warningText(context),
               ),
             ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _WarrantyFilterChip extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onSelected;
-
-  const _WarrantyFilterChip({
-    required this.label,
-    required this.isSelected,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Material(
-      color: isSelected
-          ? AppColors.primaryBlue
-          : AppColors.surface,
-      borderRadius: BorderRadius.circular(24),
-      child: InkWell(
-        onTap: onSelected,
-        borderRadius: BorderRadius.circular(24),
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 42),
-          padding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 9,
-          ),
-          decoration: BoxDecoration(
-            border: Border.all(
-              color: isSelected
-                  ? AppColors.primaryBlue
-                  : AppColors.border,
-            ),
-            borderRadius: BorderRadius.circular(24),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: isSelected
-                  ? AppColors.surface
-                  : AppColors.textSecondary,
-              fontWeight: FontWeight.w600,
-            ),
           ),
         ),
       ),
@@ -698,10 +549,7 @@ class _WarrantyCard extends StatelessWidget {
   final _WarrantyItem warranty;
   final VoidCallback onTap;
 
-  const _WarrantyCard({
-    required this.warranty,
-    required this.onTap,
-  });
+  const _WarrantyCard({required this.warranty, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -710,9 +558,7 @@ class _WarrantyCard extends StatelessWidget {
     return Card(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(
-          AppConstants.borderRadiusLarge,
-        ),
+        borderRadius: BorderRadius.circular(AppConstants.borderRadiusLarge),
         child: Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -722,7 +568,7 @@ class _WarrantyCard extends StatelessWidget {
                 width: 58,
                 height: 66,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
+                  color: AppColors.neutralSurface(context),
                   borderRadius: BorderRadius.circular(
                     AppConstants.borderRadiusMedium,
                   ),
@@ -730,7 +576,7 @@ class _WarrantyCard extends StatelessWidget {
                 child: Icon(
                   warranty.icon,
                   size: 32,
-                  color: AppColors.primaryDark,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               const SizedBox(width: 12),
@@ -752,12 +598,8 @@ class _WarrantyCard extends StatelessWidget {
                             ),
                           ),
                         ),
-                        const SizedBox(
-                          width: AppConstants.paddingSmall,
-                        ),
-                        _WarrantyStatusBadge(
-                          status: warranty.status,
-                        ),
+                        const SizedBox(width: AppConstants.paddingSmall),
+                        _WarrantyStatusBadge(status: warranty.status),
                       ],
                     ),
                     const SizedBox(height: 2),
@@ -765,15 +607,13 @@ class _WarrantyCard extends StatelessWidget {
                       warranty.model,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontSize: 12,
-                      ),
+                      style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
                     ),
                     const SizedBox(height: 6),
                     Text(
                       warranty.expiry,
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textPrimary,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
                       ),
@@ -797,9 +637,7 @@ class _WarrantyCard extends StatelessWidget {
 class _WarrantyStatusBadge extends StatelessWidget {
   final _WarrantyStatus status;
 
-  const _WarrantyStatusBadge({
-    required this.status,
-  });
+  const _WarrantyStatusBadge({required this.status});
 
   @override
   Widget build(BuildContext context) {
@@ -807,25 +645,22 @@ class _WarrantyStatusBadge extends StatelessWidget {
       _WarrantyStatus.active => (
         'Active',
         AppColors.success,
-        const Color(0xFFDCFCE7),
+        AppColors.successSurface(context),
       ),
       _WarrantyStatus.expiringSoon => (
         'Expiring Soon',
-        const Color(0xFFEA580C),
-        const Color(0xFFFFEDD5),
+        AppColors.warningText(context),
+        AppColors.warningSurfaceStrong(context),
       ),
       _WarrantyStatus.expired => (
         'Expired',
         AppColors.error,
-        const Color(0xFFFEE2E2),
+        AppColors.errorSurface(context),
       ),
     };
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 4,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(20),
@@ -836,19 +671,16 @@ class _WarrantyStatusBadge extends StatelessWidget {
           Container(
             width: 6,
             height: 6,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
           ),
           const SizedBox(width: 5),
           Text(
             label,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: color,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -859,17 +691,13 @@ class _WarrantyStatusBadge extends StatelessWidget {
 class _WarrantyFilterSheet extends StatefulWidget {
   final _WarrantyFilterSelection initialSelection;
 
-  const _WarrantyFilterSheet({
-    required this.initialSelection,
-  });
+  const _WarrantyFilterSheet({required this.initialSelection});
 
   @override
-  State<_WarrantyFilterSheet> createState() =>
-      _WarrantyFilterSheetState();
+  State<_WarrantyFilterSheet> createState() => _WarrantyFilterSheetState();
 }
 
-class _WarrantyFilterSheetState
-    extends State<_WarrantyFilterSheet> {
+class _WarrantyFilterSheetState extends State<_WarrantyFilterSheet> {
   late _WarrantyFilter _status;
   late _ExpiryPeriod _expiryPeriod;
   late _ApplianceType _applianceType;
@@ -929,25 +757,20 @@ class _WarrantyFilterSheetState
                   ),
                 ),
                 IconButton(
-                  onPressed: () =>
-                      Navigator.of(context).pop(),
+                  onPressed: () => Navigator.of(context).pop(),
                   tooltip: 'Close filters',
-                  icon: const Icon(
-                    Icons.close_rounded,
-                  ),
+                  icon: const Icon(Icons.close_rounded),
                 ),
               ],
             ),
           ),
-          const Divider(
+          Divider(
             height: 1,
-            color: AppColors.border,
+            color: Theme.of(context).colorScheme.outlineVariant,
           ),
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.all(
-                AppConstants.paddingLarge,
-              ),
+              padding: const EdgeInsets.all(AppConstants.paddingLarge),
               children: [
                 _FilterSection<_WarrantyFilter>(
                   title: 'Warranty Status',
@@ -955,80 +778,43 @@ class _WarrantyFilterSheetState
                   options: const [
                     (_WarrantyFilter.all, 'All'),
                     (_WarrantyFilter.active, 'Active'),
-                    (
-                      _WarrantyFilter.expiring,
-                      'Expiring Soon',
-                    ),
+                    (_WarrantyFilter.expiring, 'Expiring Soon'),
                     (_WarrantyFilter.expired, 'Expired'),
                   ],
                   onSelected: (value) {
                     setState(() => _status = value);
                   },
                 ),
-                const SizedBox(
-                  height: AppConstants.paddingLarge,
-                ),
+                const SizedBox(height: AppConstants.paddingLarge),
                 _FilterSection<_ExpiryPeriod>(
                   title: 'Expiry Period',
                   selectedValue: _expiryPeriod,
                   options: const [
                     (_ExpiryPeriod.anyTime, 'Any time'),
-                    (
-                      _ExpiryPeriod.within30Days,
-                      'Within 30 days',
-                    ),
-                    (
-                      _ExpiryPeriod.within3Months,
-                      'Within 3 months',
-                    ),
-                    (
-                      _ExpiryPeriod.within6Months,
-                      'Within 6 months',
-                    ),
+                    (_ExpiryPeriod.within30Days, 'Within 30 days'),
+                    (_ExpiryPeriod.within3Months, 'Within 3 months'),
+                    (_ExpiryPeriod.within6Months, 'Within 6 months'),
                   ],
                   onSelected: (value) {
-                    setState(
-                      () => _expiryPeriod = value,
-                    );
+                    setState(() => _expiryPeriod = value);
                   },
                 ),
-                const SizedBox(
-                  height: AppConstants.paddingLarge,
-                ),
+                const SizedBox(height: AppConstants.paddingLarge),
                 _FilterSection<_ApplianceType>(
                   title: 'Appliance Type',
                   selectedValue: _applianceType,
                   options: const [
-                    (
-                      _ApplianceType.all,
-                      'All appliances',
-                    ),
-                    (
-                      _ApplianceType.refrigerator,
-                      'Refrigerator',
-                    ),
-                    (
-                      _ApplianceType.washingMachine,
-                      'Washing Machine',
-                    ),
-                    (
-                      _ApplianceType.airConditioner,
-                      'Air Conditioner',
-                    ),
-                    (
-                      _ApplianceType.television,
-                      'TV',
-                    ),
+                    (_ApplianceType.all, 'All appliances'),
+                    (_ApplianceType.refrigerator, 'Refrigerator'),
+                    (_ApplianceType.washingMachine, 'Washing Machine'),
+                    (_ApplianceType.airConditioner, 'Air Conditioner'),
+                    (_ApplianceType.television, 'TV'),
                   ],
                   onSelected: (value) {
-                    setState(
-                      () => _applianceType = value,
-                    );
+                    setState(() => _applianceType = value);
                   },
                 ),
-                const SizedBox(
-                  height: AppConstants.paddingLarge,
-                ),
+                const SizedBox(height: AppConstants.paddingLarge),
                 _FilterSection<_WarrantySort>(
                   title: 'Sort By',
                   selectedValue: _sort,
@@ -1037,10 +823,7 @@ class _WarrantyFilterSheetState
                       _WarrantySort.expiryEarliest,
                       'Expiry date: Earliest first',
                     ),
-                    (
-                      _WarrantySort.expiryLatest,
-                      'Expiry date: Latest first',
-                    ),
+                    (_WarrantySort.expiryLatest, 'Expiry date: Latest first'),
                   ],
                   onSelected: (value) {
                     setState(() => _sort = value);
@@ -1056,11 +839,11 @@ class _WarrantyFilterSheetState
               AppConstants.paddingLarge,
               AppConstants.paddingMedium,
             ),
-            decoration: const BoxDecoration(
-              color: AppColors.surface,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
               border: Border(
                 top: BorderSide(
-                  color: AppColors.border,
+                  color: Theme.of(context).colorScheme.outlineVariant,
                 ),
               ),
             ),
@@ -1070,9 +853,7 @@ class _WarrantyFilterSheetState
                   onPressed: _resetFilters,
                   child: const Text('Reset Filters'),
                 ),
-                const SizedBox(
-                  width: AppConstants.paddingMedium,
-                ),
+                const SizedBox(width: AppConstants.paddingMedium),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: _applyFilters,
@@ -1111,7 +892,7 @@ class _FilterSection<T> extends StatelessWidget {
         Text(
           title.toUpperCase(),
           style: theme.textTheme.bodyMedium?.copyWith(
-            color: AppColors.textPrimary,
+            color: Theme.of(context).colorScheme.onSurface,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.5,
           ),
@@ -1123,8 +904,7 @@ class _FilterSection<T> extends StatelessWidget {
             isSelected: selectedValue == option.$1,
             onTap: () => onSelected(option.$1),
           ),
-          if (option != options.last)
-            const SizedBox(height: 6),
+          if (option != options.last) const SizedBox(height: 6),
         ],
       ],
     );
@@ -1148,29 +928,20 @@ class _FilterOption extends StatelessWidget {
 
     return Material(
       color: isSelected
-          ? const Color(0xFFEFF6FF)
-          : AppColors.surface,
-      borderRadius: BorderRadius.circular(
-        AppConstants.borderRadiusMedium,
-      ),
+          ? AppColors.blueSurface(context)
+          : Theme.of(context).colorScheme.surface,
+      borderRadius: BorderRadius.circular(AppConstants.borderRadiusMedium),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(
-          AppConstants.borderRadiusMedium,
-        ),
+        borderRadius: BorderRadius.circular(AppConstants.borderRadiusMedium),
         child: Container(
-          constraints: const BoxConstraints(
-            minHeight: 48,
-          ),
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 10,
-          ),
+          constraints: const BoxConstraints(minHeight: 48),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
           decoration: BoxDecoration(
             border: Border.all(
               color: isSelected
                   ? AppColors.primaryBlue
-                  : AppColors.border,
+                  : Theme.of(context).colorScheme.outlineVariant,
             ),
             borderRadius: BorderRadius.circular(
               AppConstants.borderRadiusMedium,
@@ -1184,7 +955,7 @@ class _FilterOption extends StatelessWidget {
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: isSelected
                         ? AppColors.primaryBlue
-                        : AppColors.textPrimary,
+                        : Theme.of(context).colorScheme.onSurface,
                     fontWeight: isSelected
                         ? FontWeight.w600
                         : FontWeight.normal,
@@ -1197,7 +968,7 @@ class _FilterOption extends StatelessWidget {
                     : Icons.radio_button_unchecked_rounded,
                 color: isSelected
                     ? AppColors.primaryBlue
-                    : AppColors.textSecondary,
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
                 size: 22,
               ),
             ],
@@ -1223,21 +994,14 @@ class _NoWarrantyResults extends StatelessWidget {
         ),
         child: Column(
           children: [
-            const Icon(
+            Icon(
               Icons.search_off_rounded,
               size: 52,
-              color: AppColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(
-              height: AppConstants.paddingMedium,
-            ),
-            Text(
-              'No warranties found',
-              style: theme.textTheme.titleMedium,
-            ),
-            const SizedBox(
-              height: AppConstants.paddingSmall,
-            ),
+            const SizedBox(height: AppConstants.paddingMedium),
+            Text('No warranties found', style: theme.textTheme.titleMedium),
+            const SizedBox(height: AppConstants.paddingSmall),
             Text(
               'Try a different search or adjust your filters.',
               style: theme.textTheme.bodyMedium,
@@ -1253,9 +1017,7 @@ class _NoWarrantyResults extends StatelessWidget {
 class _EmptyWarrantyState extends StatelessWidget {
   final VoidCallback onAddWarranty;
 
-  const _EmptyWarrantyState({
-    required this.onAddWarranty,
-  });
+  const _EmptyWarrantyState({required this.onAddWarranty});
 
   @override
   Widget build(BuildContext context) {
@@ -1269,29 +1031,20 @@ class _EmptyWarrantyState extends StatelessWidget {
         ),
         child: Column(
           children: [
-            const Icon(
+            Icon(
               Icons.verified_user_outlined,
               size: 52,
-              color: AppColors.textSecondary,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(
-              height: AppConstants.paddingMedium,
-            ),
-            Text(
-              'No warranties yet',
-              style: theme.textTheme.titleMedium,
-            ),
-            const SizedBox(
-              height: AppConstants.paddingSmall,
-            ),
+            const SizedBox(height: AppConstants.paddingMedium),
+            Text('No warranties yet', style: theme.textTheme.titleMedium),
+            const SizedBox(height: AppConstants.paddingSmall),
             Text(
               'Add warranty information to keep track of coverage and expiry dates.',
               style: theme.textTheme.bodyMedium,
               textAlign: TextAlign.center,
             ),
-            const SizedBox(
-              height: AppConstants.paddingLarge,
-            ),
+            const SizedBox(height: AppConstants.paddingLarge),
             ElevatedButton.icon(
               onPressed: onAddWarranty,
               icon: const Icon(Icons.add_rounded),
