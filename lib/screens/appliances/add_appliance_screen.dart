@@ -21,30 +21,20 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _categoryController = TextEditingController();
   final TextEditingController _brandController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _modelController = TextEditingController();
   final TextEditingController _serialController = TextEditingController();
 
-  String? _selectedCategory;
   DateTime? _selectedDate;
   PlatformFile? _pickedFile;
   bool _isSubmitting = false;
 
-  final List<String> _categories = [
-    'Refrigerator',
-    'Washing Machine',
-    'Air Conditioner',
-    'Television',
-    'Microwave',
-    'Dishwasher',
-    'Water Heater',
-    'Other',
-  ];
-
   @override
   void dispose() {
     _nameController.dispose();
+    _categoryController.dispose();
     _brandController.dispose();
     _dateController.dispose();
     _modelController.dispose();
@@ -121,7 +111,7 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
       final success = await provider.createAppliance(
         userId: user.uid,
         applianceName: _nameController.text.trim(),
-        category: _selectedCategory ?? 'Other',
+        category: _categoryController.text.trim(),
         brand: _brandController.text.trim(),
         purchaseDate: _selectedDate!,
         modelNumber: _modelController.text.trim(),
@@ -292,7 +282,7 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Field 1: Appliance Name
-                      _buildLabel('Appliance Name'),
+                      _buildLabel('Appliance Name', isRequired: true),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _nameController,
@@ -301,34 +291,22 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
                         ),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Appliance Name is required';
+                            return 'Appliance name is required';
                           }
                           return null;
                         },
                       ),
                       const SizedBox(height: 16),
 
-                      // Field 2: Category Dropdown
-                      _buildLabel('Category'),
+                      // Field 2: Free-text Category
+                      _buildLabel('Category', isRequired: true),
                       const SizedBox(height: 6),
-                      DropdownButtonFormField<String>(
-                        initialValue: _selectedCategory,
-                        decoration: _buildInputDecoration('Select Category'),
-                        icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                        items: _categories.map((category) {
-                          return DropdownMenuItem<String>(
-                            value: category,
-                            child: Text(category),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedCategory = value;
-                          });
-                        },
+                      TextFormField(
+                        controller: _categoryController,
+                        decoration: _buildInputDecoration('e.g. Refrigerator'),
                         validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'Please select a category';
+                          if (value == null || value.trim().isEmpty) {
+                            return 'Category is required';
                           }
                           return null;
                         },
@@ -343,7 +321,7 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildLabel('Brand'),
+                                _buildLabel('Brand', isRequired: true),
                                 const SizedBox(height: 6),
                                 TextFormField(
                                   controller: _brandController,
@@ -365,7 +343,7 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                _buildLabel('Purchase Date'),
+                                _buildLabel('Purchase Date', isRequired: true),
                                 const SizedBox(height: 6),
                                 TextFormField(
                                   controller: _dateController,
@@ -373,10 +351,18 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
                                   onTap: () => _selectDate(context),
                                   decoration: _buildInputDecoration(
                                     'mm/dd/yyyy',
+                                    suffixIcon: IconButton(
+                                      tooltip: 'Select purchase date',
+                                      onPressed: () => _selectDate(context),
+                                      icon: const Icon(
+                                        Icons.calendar_today_outlined,
+                                        size: 20,
+                                      ),
+                                    ),
                                   ),
                                   validator: (value) {
                                     if (value == null || value.trim().isEmpty) {
-                                      return 'Required';
+                                      return 'Purchase date is required';
                                     }
                                     return null;
                                   },
@@ -389,14 +375,14 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
                       const SizedBox(height: 16),
 
                       // Field 5: Model Number
-                      _buildLabel('Model Number'),
+                      _buildLabel('Model Number', isRequired: true),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _modelController,
                         decoration: _buildInputDecoration('e.g. RF28R7351SG'),
                         validator: (value) {
                           if (value == null || value.trim().isEmpty) {
-                            return 'Model Number is required';
+                            return 'Model number is required';
                           }
                           return null;
                         },
@@ -462,16 +448,33 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
     );
   }
 
-  Widget _buildLabel(String text) {
-    return Text(
-      text,
-      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+  Widget _buildLabel(String text, {bool isRequired = false}) {
+    final style = Theme.of(context).textTheme.bodyMedium?.copyWith(
+      color: Theme.of(context).colorScheme.onSurface,
+      fontWeight: FontWeight.w600,
+    );
+    return Text.rich(
+      TextSpan(
+        text: text,
+        style: style,
+        children: isRequired
+            ? [
+                TextSpan(
+                  text: ' *',
+                  style: style?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ]
+            : const [],
+      ),
     );
   }
 
-  InputDecoration _buildInputDecoration(String hint) {
+  InputDecoration _buildInputDecoration(String hint, {Widget? suffixIcon}) {
     return InputDecoration(
       hintText: hint,
+      suffixIcon: suffixIcon,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
     );

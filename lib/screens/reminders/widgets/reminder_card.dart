@@ -23,15 +23,23 @@ class ReminderCard extends StatelessWidget {
     required this.onTap,
   });
 
-  bool get _isOverdue => status == 'Overdue';
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final statusColor = _isOverdue ? AppColors.error : AppColors.secondaryTeal;
-    final statusBackground = _isOverdue
-        ? AppColors.errorSurface(context)
-        : AppColors.tealSurface(context);
+    final colorScheme = theme.colorScheme;
+    final Color statusColor;
+    final Color statusBackground;
+
+    if (status == 'Completed') {
+      statusColor = AppColors.successText(context);
+      statusBackground = AppColors.successSurface(context);
+    } else if (status == 'Overdue') {
+      statusColor = colorScheme.error;
+      statusBackground = colorScheme.errorContainer;
+    } else {
+      statusColor = colorScheme.primary;
+      statusBackground = colorScheme.primaryContainer;
+    }
 
     return Card(
       child: InkWell(
