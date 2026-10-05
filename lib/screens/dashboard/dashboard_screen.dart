@@ -367,7 +367,7 @@ class DashboardScreen extends StatelessWidget {
                       icon: Icons.verified_outlined,
                       iconBg: const Color(0xFFF0FDF4),
                       iconColor: AppColors.success,
-                      onTap: () => context.go('/warranties'),
+                      onTap: () => context.push('/warranties/expiry'),
                     ),
                   ],
                 );
@@ -636,7 +636,7 @@ class DashboardScreen extends StatelessWidget {
             ),
           ),
           child: InkWell(
-            onTap: () => context.go('/warranties'),
+            onTap: () => context.push('/warranties/expiry'),
             borderRadius: BorderRadius.circular(16),
             child: Padding(
               padding: const EdgeInsets.all(16.0),

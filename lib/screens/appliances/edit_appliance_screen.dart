@@ -25,28 +25,17 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
   final _formKey = GlobalKey<FormState>();
 
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _categoryController = TextEditingController();
   final TextEditingController _brandController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
   final TextEditingController _modelController = TextEditingController();
   final TextEditingController _serialController = TextEditingController();
 
-  String? _selectedCategory;
   DateTime? _selectedDate;
   String? _existingPhotoUrl;
   PlatformFile? _newPhotoFile;
   bool _isSubmitting = false;
   bool _isInitialized = false;
-
-  final List<String> _categories = [
-    'Refrigerator',
-    'Washing Machine',
-    'Air Conditioner',
-    'Television',
-    'Microwave',
-    'Dishwasher',
-    'Water Heater',
-    'Other',
-  ];
 
   @override
   void initState() {
@@ -62,7 +51,7 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
     _brandController.text = appliance.brand;
     _modelController.text = appliance.modelNumber;
     _serialController.text = appliance.serialNumber ?? '';
-    _selectedCategory = appliance.category;
+    _categoryController.text = appliance.category;
     _selectedDate = appliance.purchaseDate;
     _existingPhotoUrl = appliance.photoUrl;
 
@@ -74,6 +63,7 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _categoryController.dispose();
     _brandController.dispose();
     _dateController.dispose();
     _modelController.dispose();
@@ -151,7 +141,7 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
         applianceId: targetApplianceId,
         userId: user.uid,
         applianceName: _nameController.text.trim(),
-        category: _selectedCategory ?? 'Other',
+        category: _categoryController.text.trim(),
         brand: _brandController.text.trim(),
         purchaseDate: _selectedDate!,
         modelNumber: _modelController.text.trim(),
@@ -203,7 +193,7 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
         widget.applianceId ?? widget.appliance?.id ?? '';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(title: const Text('Edit Appliance'), centerTitle: true),
       body: SafeArea(
         child: StreamBuilder<ApplianceModel?>(
@@ -268,7 +258,7 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildLabel('Appliance Name'),
+                          _buildLabel('Appliance Name', isRequired: true),
                           const SizedBox(height: 6),
                           TextFormField(
                             controller: _nameController,
@@ -276,28 +266,20 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
                               'e.g. Kitchen Refrigerator',
                             ),
                             validator: (v) => v == null || v.trim().isEmpty
-                                ? 'Appliance Name is required'
+                                ? 'Appliance name is required'
                                 : null,
                           ),
                           const SizedBox(height: 16),
 
-                          _buildLabel('Category'),
+                          _buildLabel('Category', isRequired: true),
                           const SizedBox(height: 6),
-                          DropdownButtonFormField<String>(
-                            initialValue: _selectedCategory,
+                          TextFormField(
+                            controller: _categoryController,
                             decoration: _buildInputDecoration(
-                              'Select Category',
+                              'e.g. Refrigerator',
                             ),
-                            items: _categories.map((cat) {
-                              return DropdownMenuItem(
-                                value: cat,
-                                child: Text(cat),
-                              );
-                            }).toList(),
-                            onChanged: (val) =>
-                                setState(() => _selectedCategory = val),
-                            validator: (v) => v == null || v.isEmpty
-                                ? 'Select category'
+                            validator: (v) => v == null || v.trim().isEmpty
+                                ? 'Category is required'
                                 : null,
                           ),
                           const SizedBox(height: 16),
@@ -309,7 +291,7 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildLabel('Brand'),
+                                    _buildLabel('Brand', isRequired: true),
                                     const SizedBox(height: 6),
                                     TextFormField(
                                       controller: _brandController,
@@ -318,7 +300,7 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
                                       ),
                                       validator: (v) =>
                                           v == null || v.trim().isEmpty
-                                          ? 'Brand required'
+                                          ? 'Brand is required'
                                           : null,
                                     ),
                                   ],
@@ -329,7 +311,10 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _buildLabel('Purchase Date'),
+                                    _buildLabel(
+                                      'Purchase Date',
+                                      isRequired: true,
+                                    ),
                                     const SizedBox(height: 6),
                                     TextFormField(
                                       controller: _dateController,
@@ -337,10 +322,18 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
                                       onTap: () => _selectDate(context),
                                       decoration: _buildInputDecoration(
                                         'mm/dd/yyyy',
+                                        suffixIcon: IconButton(
+                                          tooltip: 'Select purchase date',
+                                          onPressed: () => _selectDate(context),
+                                          icon: const Icon(
+                                            Icons.calendar_today_outlined,
+                                            size: 20,
+                                          ),
+                                        ),
                                       ),
                                       validator: (v) =>
                                           v == null || v.trim().isEmpty
-                                          ? 'Date required'
+                                          ? 'Purchase date is required'
                                           : null,
                                     ),
                                   ],
@@ -350,7 +343,7 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
                           ),
                           const SizedBox(height: 16),
 
-                          _buildLabel('Model Number'),
+                          _buildLabel('Model Number', isRequired: true),
                           const SizedBox(height: 6),
                           TextFormField(
                             controller: _modelController,
@@ -358,7 +351,7 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
                               'e.g. RF28R7351SG',
                             ),
                             validator: (v) => v == null || v.trim().isEmpty
-                                ? 'Model Number is required'
+                                ? 'Model number is required'
                                 : null,
                           ),
                           const SizedBox(height: 16),
@@ -454,16 +447,33 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
     );
   }
 
-  Widget _buildLabel(String text) {
-    return Text(
-      text,
-      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+  Widget _buildLabel(String text, {bool isRequired = false}) {
+    final style = Theme.of(context).textTheme.bodyMedium?.copyWith(
+      color: Theme.of(context).colorScheme.onSurface,
+      fontWeight: FontWeight.w600,
+    );
+    return Text.rich(
+      TextSpan(
+        text: text,
+        style: style,
+        children: isRequired
+            ? [
+                TextSpan(
+                  text: ' *',
+                  style: style?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                ),
+              ]
+            : const [],
+      ),
     );
   }
 
-  InputDecoration _buildInputDecoration(String hint) {
+  InputDecoration _buildInputDecoration(String hint, {Widget? suffixIcon}) {
     return InputDecoration(
       hintText: hint,
+      suffixIcon: suffixIcon,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
     );

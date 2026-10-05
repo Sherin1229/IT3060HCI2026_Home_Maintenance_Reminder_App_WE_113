@@ -18,18 +18,7 @@ class AppliancesScreen extends StatefulWidget {
 class _AppliancesScreenState extends State<AppliancesScreen> {
   final TextEditingController _searchController = TextEditingController();
   String _selectedCategory = 'All';
-
-  final List<String> _filterCategories = [
-    'All',
-    'Refrigerator',
-    'Washing Machine',
-    'Air Conditioner',
-    'Television',
-    'Microwave',
-    'Dishwasher',
-    'Water Heater',
-    'Other',
-  ];
+  List<ApplianceModel> _currentAppliances = const [];
 
   @override
   void initState() {
@@ -62,16 +51,42 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
     }).toList();
   }
 
-  void _showFilterBottomSheet() {
+  List<String> _filterCategories(List<ApplianceModel> appliances) {
+    final categoriesByLowercase = <String, String>{};
+    for (final appliance in appliances) {
+      final category = appliance.category.trim();
+      if (category.isNotEmpty) {
+        categoriesByLowercase.putIfAbsent(
+          category.toLowerCase(),
+          () => category,
+        );
+      }
+    }
+    if (_selectedCategory != 'All') {
+      categoriesByLowercase.putIfAbsent(
+        _selectedCategory.toLowerCase(),
+        () => _selectedCategory,
+      );
+    }
+
+    final categories = categoriesByLowercase.values.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return ['All', ...categories];
+  }
+
+  void _showFilterBottomSheet(List<ApplianceModel> appliances) {
+    final filterCategories = _filterCategories(appliances);
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
+            return SingleChildScrollView(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppConstants.paddingMedium,
                 vertical: AppConstants.paddingLarge,
@@ -100,7 +115,7 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _filterCategories.map((cat) {
+                    children: filterCategories.map((cat) {
                       final isSelected = _selectedCategory == cat;
                       return ChoiceChip(
                         label: Text(cat),
@@ -210,7 +225,7 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                       const SizedBox(width: 12),
                       // Filter Button
                       InkWell(
-                        onTap: _showFilterBottomSheet,
+                        onTap: () => _showFilterBottomSheet(_currentAppliances),
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
                           height: 48,
@@ -262,6 +277,7 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                             }
 
                             final rawList = snapshot.data ?? [];
+                            _currentAppliances = rawList;
                             final filteredList = _filterList(rawList);
 
                             if (filteredList.isEmpty) {
