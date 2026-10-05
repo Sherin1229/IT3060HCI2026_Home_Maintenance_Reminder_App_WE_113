@@ -10,6 +10,7 @@ import '../../config/app_colors.dart';
 import '../../models/maintenance_model.dart';
 import '../../providers/maintenance_provider.dart';
 import '../../widgets/primary_button.dart';
+import '../../widgets/appliance_selection_field.dart';
 
 class MaintenanceFormScreen extends StatefulWidget {
   final MaintenanceFormMode mode;
@@ -27,13 +28,15 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
   final _notesController = TextEditingController();
   final _costController = TextEditingController();
   final _providerController = TextEditingController();
-  String? _appliance;
-  String? _type;
+  final _applianceController = TextEditingController();
+  final _typeController = TextEditingController();
+  String? _selectedApplianceId;
   DateTime? _date;
   MaintenanceRecord? _record;
   List<PlatformFile> _selectedFiles = [];
   bool _loadingRecord = false;
   bool _submitting = false;
+  bool _hasAttemptedSubmit = false;
 
   bool get isCompleting => widget.mode == MaintenanceFormMode.complete;
   bool get isEditing => widget.mode == MaintenanceFormMode.edit;
@@ -65,8 +68,9 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
     if (!mounted) return;
     if (record != null) {
       _record = record;
-      _appliance = record.appliance;
-      _type = record.title;
+      _selectedApplianceId = record.applianceId;
+      _applianceController.text = record.appliance;
+      _typeController.text = record.title;
       _date = isCompleting ? DateTime.now() : record.scheduledDate;
       _notesController.text = record.notes ?? '';
       _costController.text = record.cost ?? '';
@@ -80,6 +84,8 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
     _notesController.dispose();
     _costController.dispose();
     _providerController.dispose();
+    _applianceController.dispose();
+    _typeController.dispose();
     super.dispose();
   }
 
@@ -100,7 +106,9 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
 
   Future<void> _submit() async {
     FocusScope.of(context).unfocus();
-    if (!(_formKey.currentState?.validate() ?? false) || _date == null) {
+    setState(() => _hasAttemptedSubmit = true);
+    final isFormValid = _formKey.currentState?.validate() ?? false;
+    if (!isFormValid || _date == null) {
       setState(() {});
       return;
     }
@@ -145,10 +153,11 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
               MaintenanceRecord(
                 id: _record!.id,
                 userId: _record!.userId,
-                title: _type!.trim(),
-                appliance: _appliance!.trim(),
+                applianceId: _selectedApplianceId,
+                title: _typeController.text.trim(),
+                appliance: _applianceController.text.trim(),
                 location: _record!.location.isEmpty
-                    ? _appliance!.trim()
+                    ? _applianceController.text.trim()
                     : _record!.location,
                 scheduledDate: _date!,
                 completedDate: _record!.completedDate,
@@ -164,9 +173,10 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
               MaintenanceRecord(
                 id: '',
                 userId: user.uid,
-                title: _type!.trim(),
-                appliance: _appliance!.trim(),
-                location: _appliance!.trim(),
+                applianceId: _selectedApplianceId,
+                title: _typeController.text.trim(),
+                appliance: _applianceController.text.trim(),
+                location: _applianceController.text.trim(),
                 scheduledDate: _date!,
                 cost: _optionalValue(_costController.text),
                 serviceProvider: _optionalValue(_providerController.text),
@@ -229,6 +239,9 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
       appBar: AppBar(title: Text(_title)),
       body: Form(
         key: _formKey,
+        autovalidateMode: _hasAttemptedSubmit
+            ? AutovalidateMode.onUserInteraction
+            : AutovalidateMode.disabled,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
           children: [
@@ -237,54 +250,37 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
               const SizedBox(height: 20),
             ],
             if (!isCompleting) ...[
-              _FieldLabel(label: 'Appliance', requiredField: true),
-              DropdownButtonFormField<String>(
-                initialValue: _appliance,
-                hint: const Text('Select appliance'),
-                items:
-                    [
-                          'Samsung Refrigerator',
-                          'Bedroom AC',
-                          'Living Room AC',
-                          'Washing Machine',
-                          'Kitchen',
-                        ]
-                        .map(
-                          (value) => DropdownMenuItem(
-                            value: value,
-                            child: Text(value),
-                          ),
-                        )
-                        .toList(),
-                onChanged: (value) => setState(() => _appliance = value),
-                validator: (value) =>
-                    value == null ? 'Please select an appliance' : null,
+              ApplianceSelectionField(
+                label: isEditing
+                    ? 'Linked Appliance (Optional for legacy records)'
+                    : 'Appliance (Optional)',
+                selectedApplianceId: _selectedApplianceId,
+                onChanged: (appliance) {
+                  setState(() => _selectedApplianceId = appliance?.id);
+                  if (appliance != null) {
+                    _applianceController.text = appliance.applianceName;
+                  }
+                },
               ),
+              if (isEditing && _selectedApplianceId == null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Stored appliance: ${_applianceController.text.isEmpty ? 'Unavailable' : _applianceController.text}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ],
               const SizedBox(height: 16),
               _FieldLabel(label: 'Maintenance Type', requiredField: true),
-              DropdownButtonFormField<String>(
-                initialValue: _type,
-                hint: const Text('Select maintenance type'),
-                items:
-                    [
-                          'AC Cleaning',
-                          'Cleaning',
-                          'Repair',
-                          'Water Filter Replacement',
-                          'Filter Replacement',
-                          'General Service',
-                          'Inspection',
-                        ]
-                        .map(
-                          (value) => DropdownMenuItem(
-                            value: value,
-                            child: Text(value),
-                          ),
-                        )
-                        .toList(),
-                onChanged: (value) => setState(() => _type = value),
-                validator: (value) =>
-                    value == null ? 'Please select a maintenance type' : null,
+              TextFormField(
+                controller: _typeController,
+                textCapitalization: TextCapitalization.words,
+                textInputAction: TextInputAction.next,
+                decoration: const InputDecoration(
+                  hintText: 'E.g. General Service or Inspection',
+                ),
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Please enter a maintenance type'
+                    : null,
               ),
               const SizedBox(height: 16),
             ],
@@ -293,7 +289,7 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
               requiredField: true,
             ),
             _DateField(date: _date, onTap: _selectDate),
-            if (_date == null)
+            if (_hasAttemptedSubmit && _date == null)
               const Padding(
                 padding: EdgeInsets.only(top: 6, left: 12),
                 child: Text(

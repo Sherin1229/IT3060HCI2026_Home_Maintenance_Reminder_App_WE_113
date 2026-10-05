@@ -3,8 +3,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../config/app_colors.dart';
 import '../../utils/constants.dart';
+import '../../widgets/appliance_selection_field.dart';
 
 class WarrantyDraft {
+  final String? applianceId;
   final String applianceType;
   final String brand;
   final String model;
@@ -14,6 +16,7 @@ class WarrantyDraft {
   final String notes;
 
   const WarrantyDraft({
+    this.applianceId,
     required this.applianceType,
     required this.brand,
     required this.model,
@@ -44,6 +47,7 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
   bool _hasAttemptedValidation = false;
+  String? _selectedApplianceId;
 
   @override
   void dispose() {
@@ -128,6 +132,7 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
     context.push(
       '/add-warranty/document',
       extra: WarrantyDraft(
+        applianceId: _selectedApplianceId,
         applianceType: _applianceTypeController.text.trim(),
         brand: _brandController.text.trim(),
         model: _modelController.text.trim(),
@@ -166,6 +171,20 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
             children: [
               const _WarrantyStepIndicator(),
               const SizedBox(height: 28),
+              ApplianceSelectionField(
+                label: 'Appliance (Optional)',
+                selectedApplianceId: _selectedApplianceId,
+                onChanged: (appliance) {
+                  setState(() => _selectedApplianceId = appliance?.id);
+                  if (appliance != null) {
+                    _applianceTypeController.text = appliance.category;
+                    _brandController.text = appliance.brand;
+                    _modelController.text = appliance.modelNumber;
+                    _revalidateAfterChange();
+                  }
+                },
+              ),
+              const SizedBox(height: AppConstants.paddingMedium),
               _FormRow(
                 icon: Icons.kitchen_outlined,
                 label: 'Appliance Type',
@@ -255,12 +274,15 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
               _FormRow(
                 icon: Icons.business_outlined,
                 label: 'Provider / Company',
+                isRequired: true,
                 child: TextFormField(
                   controller: _providerController,
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
                     hintText: 'Enter provider / company',
                   ),
+                  validator: (value) =>
+                      _requiredTextValidator(value, 'provider / company'),
                 ),
               ),
               const SizedBox(height: AppConstants.paddingMedium),
