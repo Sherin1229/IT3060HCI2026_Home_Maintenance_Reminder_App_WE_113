@@ -197,6 +197,7 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
       // Create the warranty and keep its Firestore document ID.
       final warrantyId = await _warrantyService.createWarranty(
         userId: user.uid,
+        applianceId: widget.draft.applianceId,
         applianceType: widget.draft.applianceType,
         brand: widget.draft.brand,
         model: widget.draft.model,

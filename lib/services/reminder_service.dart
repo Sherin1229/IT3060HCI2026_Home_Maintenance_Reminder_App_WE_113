@@ -40,6 +40,7 @@ class ReminderService {
     await _verifyOwnership(reference, reminder.userId);
     await reference.update({
       'title': reminder.title,
+      'applianceId': reminder.applianceId,
       'category': reminder.category,
       'location': reminder.location,
       'date': Timestamp.fromDate(reminder.date),

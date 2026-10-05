@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../config/app_colors.dart';
 import '../../utils/constants.dart';
 import '../../services/warranty_service.dart';
+import '../../widgets/appliance_selection_field.dart';
 
 enum _EditWarrantyTab { details, documents }
 
@@ -49,6 +50,7 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
 
   _EditWarrantyTab _selectedTab = _EditWarrantyTab.details;
   String? _applianceType;
+  String? _selectedApplianceId;
   DateTime? _startDate;
   DateTime? _endDate;
   bool _validationAttempted = false;
@@ -116,6 +118,7 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
       final documentDate = documentTimestamp?.toDate();
 
       setState(() {
+        _selectedApplianceId = data['applianceId']?.toString();
         _applianceType = data['applianceType'] as String?;
         _brandController.text = (data['brand'] as String?) ?? '';
         _modelController.text = (data['model'] as String?) ?? '';
@@ -241,6 +244,7 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
     try {
       await _warrantyService.updateWarranty(
         warrantyId: widget.warrantyId,
+        applianceId: _selectedApplianceId,
         applianceType: _applianceType!,
         brand: _brandController.text,
         model: _modelController.text,
@@ -518,6 +522,22 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: AppConstants.paddingMedium),
+          ApplianceSelectionField(
+            label: 'Linked Appliance (Optional for legacy records)',
+            selectedApplianceId: _selectedApplianceId,
+            onChanged: (appliance) {
+              setState(() {
+                _selectedApplianceId = appliance?.id;
+                if (appliance != null) {
+                  _applianceType = appliance.category;
+                  _brandController.text = appliance.brand;
+                  _modelController.text = appliance.modelNumber;
+                }
+              });
+              _revalidate();
+            },
+          ),
+          const SizedBox(height: AppConstants.paddingMedium),
           _EditField(
             icon: Icons.kitchen_outlined,
             label: 'Appliance Type',
@@ -525,11 +545,18 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
             child: DropdownButtonFormField<String>(
               initialValue: _applianceType,
               isExpanded: true,
-              items: _applianceTypes
-                  .map(
-                    (type) => DropdownMenuItem(value: type, child: Text(type)),
-                  )
-                  .toList(),
+              items:
+                  {
+                        ..._applianceTypes,
+                        if (_applianceType != null &&
+                            _applianceType!.isNotEmpty)
+                          _applianceType!,
+                      }
+                      .map(
+                        (type) =>
+                            DropdownMenuItem(value: type, child: Text(type)),
+                      )
+                      .toList(),
               onChanged: (value) {
                 setState(() => _applianceType = value);
                 _revalidate();
@@ -847,85 +874,6 @@ class _EditSummaryCard extends StatelessWidget {
       ),
     );
   }
-}
-
-Widget build(BuildContext context) {
-  final theme = Theme.of(context);
-  return Card(
-    child: Padding(
-      padding: const EdgeInsets.all(AppConstants.paddingMedium),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 82,
-            height: 104,
-            decoration: BoxDecoration(
-              color: AppColors.neutralSurface(context),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              Icons.kitchen_rounded,
-              size: 54,
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Samsung Refrigerator',
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    height: 1.25,
-                  ),
-                ),
-                Text('RT32K5032S8', style: theme.textTheme.bodyMedium),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 9,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.successSurface(context),
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.check_circle_rounded,
-                        size: 15,
-                        color: AppColors.success,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        'Active',
-                        style: TextStyle(
-                          color: AppColors.success,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text('Ends 12 Aug 2028', style: theme.textTheme.bodyMedium),
-                Text(
-                  '2 years remaining',
-                  style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
 }
 
 class _EditTabs extends StatelessWidget {

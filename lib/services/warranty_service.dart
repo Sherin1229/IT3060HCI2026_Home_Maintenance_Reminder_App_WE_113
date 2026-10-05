@@ -12,6 +12,7 @@ class WarrantyService {
 
   Future<String> createWarranty({
     required String userId,
+    String? applianceId,
     required String applianceType,
     required String brand,
     required String model,
@@ -24,6 +25,8 @@ class WarrantyService {
   }) async {
     final document = await _firestore.collection('warranties').add({
       'userId': userId,
+      if (applianceId != null && applianceId.trim().isNotEmpty)
+        'applianceId': applianceId.trim(),
       'applianceType': applianceType.trim(),
       'brand': brand.trim(),
       'model': model.trim(),
@@ -55,11 +58,7 @@ class WarrantyService {
     request.fields['upload_preset'] = _uploadPreset;
 
     request.files.add(
-      http.MultipartFile.fromBytes(
-        'file',
-        fileBytes,
-        filename: fileName,
-      ),
+      http.MultipartFile.fromBytes('file', fileBytes, filename: fileName),
     );
 
     final streamedResponse = await request.send();
@@ -72,8 +71,7 @@ class WarrantyService {
       );
     }
 
-    final responseData =
-        jsonDecode(response.body) as Map<String, dynamic>;
+    final responseData = jsonDecode(response.body) as Map<String, dynamic>;
 
     final secureUrl = responseData['secure_url'] as String?;
     final publicId = responseData['public_id'] as String?;
@@ -96,9 +94,7 @@ class WarrantyService {
     });
   }
 
-  Stream<QuerySnapshot<Map<String, dynamic>>> getUserWarranties(
-    String userId,
-  ) {
+  Stream<QuerySnapshot<Map<String, dynamic>>> getUserWarranties(String userId) {
     return _firestore
         .collection('warranties')
         .where('userId', isEqualTo: userId)
@@ -108,23 +104,18 @@ class WarrantyService {
   Stream<DocumentSnapshot<Map<String, dynamic>>> getWarrantyById(
     String warrantyId,
   ) {
-    return _firestore
-        .collection('warranties')
-        .doc(warrantyId)
-        .snapshots();
+    return _firestore.collection('warranties').doc(warrantyId).snapshots();
   }
 
   Future<DocumentSnapshot<Map<String, dynamic>>> getWarrantyOnce(
     String warrantyId,
   ) {
-    return _firestore
-        .collection('warranties')
-        .doc(warrantyId)
-        .get();
+    return _firestore.collection('warranties').doc(warrantyId).get();
   }
 
   Future<void> updateWarranty({
     required String warrantyId,
+    String? applianceId,
     required String applianceType,
     required String brand,
     required String model,
@@ -135,6 +126,7 @@ class WarrantyService {
   }) async {
     await _firestore.collection('warranties').doc(warrantyId).update({
       'applianceType': applianceType.trim(),
+      'applianceId': applianceId?.trim(),
       'brand': brand.trim(),
       'model': model.trim(),
       'warrantyStartDate': Timestamp.fromDate(warrantyStartDate),
@@ -149,8 +141,10 @@ class WarrantyService {
     required String warrantyId,
     required String userId,
   }) async {
-    final document =
-        await _firestore.collection('warranties').doc(warrantyId).get();
+    final document = await _firestore
+        .collection('warranties')
+        .doc(warrantyId)
+        .get();
 
     if (!document.exists) {
       throw Exception('Warranty not found.');

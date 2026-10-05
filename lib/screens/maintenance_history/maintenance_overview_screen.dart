@@ -21,16 +21,7 @@ class MaintenanceOverviewScreen extends StatelessWidget {
       );
     }
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Maintenance'),
-        actions: [
-          IconButton(
-            onPressed: () {},
-            icon: const Icon(Icons.account_circle_outlined),
-            tooltip: 'Profile',
-          ),
-        ],
-      ),
+      appBar: AppBar(title: const Text('Maintenance')),
       body: StreamBuilder<List<MaintenanceRecord>>(
         stream: context.read<MaintenanceProvider>().getRecords(user.uid),
         builder: (context, snapshot) {

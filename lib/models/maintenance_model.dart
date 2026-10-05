@@ -8,6 +8,7 @@ enum MaintenanceStatus { completed, upcoming, overdue }
 class MaintenanceRecord {
   final String id;
   final String userId;
+  final String? applianceId;
   final String title;
   final String appliance;
   final String location;
@@ -23,6 +24,7 @@ class MaintenanceRecord {
   const MaintenanceRecord({
     required this.id,
     required this.userId,
+    this.applianceId,
     required this.title,
     required this.appliance,
     required this.location,
@@ -63,6 +65,8 @@ class MaintenanceRecord {
   Map<String, dynamic> toCreateMap() {
     return {
       'userId': userId,
+      if (applianceId != null && applianceId!.trim().isNotEmpty)
+        'applianceId': applianceId!.trim(),
       'title': title.trim(),
       'appliance': appliance.trim(),
       'location': location.trim(),
@@ -82,6 +86,7 @@ class MaintenanceRecord {
   Map<String, dynamic> toUpdateMap() {
     return {
       'title': title.trim(),
+      'applianceId': applianceId?.trim(),
       'appliance': appliance.trim(),
       'location': location.trim(),
       'scheduledDate': Timestamp.fromDate(scheduledDate),
@@ -96,13 +101,11 @@ class MaintenanceRecord {
     };
   }
 
-  factory MaintenanceRecord.fromMap(
-    String id,
-    Map<String, dynamic> map,
-  ) {
+  factory MaintenanceRecord.fromMap(String id, Map<String, dynamic> map) {
     return MaintenanceRecord(
       id: id,
       userId: map['userId']?.toString() ?? '',
+      applianceId: _stringOrNull(map['applianceId']),
       title: map['title']?.toString() ?? '',
       appliance: map['appliance']?.toString() ?? '',
       location: map['location']?.toString() ?? '',

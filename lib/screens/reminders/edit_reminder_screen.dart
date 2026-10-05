@@ -9,6 +9,7 @@ import '../../models/reminder_model.dart';
 import '../../providers/reminder_provider.dart';
 import '../../utils/constants.dart';
 import '../../widgets/primary_button.dart';
+import '../../widgets/appliance_selection_field.dart';
 import 'reminder_schedule_screen.dart';
 import 'widgets/reminder_schedule_card.dart';
 
@@ -22,23 +23,14 @@ class EditReminderScreen extends StatefulWidget {
 }
 
 class _EditReminderScreenState extends State<EditReminderScreen> {
-  static const _categories = [
-    'HVAC',
-    'Refrigerator',
-    'Water Filter',
-    'Washing Machine',
-    'Electrical',
-    'Plumbing',
-    'Other',
-  ];
-
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
+  final _categoryController = TextEditingController();
   final _locationController = TextEditingController();
   final _notesController = TextEditingController();
 
   ReminderModel? _loadedReminder;
-  String? _selectedCategory;
+  String? _selectedApplianceId;
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   String _frequency = 'Does not repeat';
@@ -49,6 +41,7 @@ class _EditReminderScreenState extends State<EditReminderScreen> {
   @override
   void dispose() {
     _titleController.dispose();
+    _categoryController.dispose();
     _locationController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -79,9 +72,8 @@ class _EditReminderScreenState extends State<EditReminderScreen> {
     _titleController.text = reminder.title;
     _locationController.text = reminder.location;
     _notesController.text = reminder.notes ?? '';
-    _selectedCategory = _categories.contains(reminder.category)
-        ? reminder.category
-        : 'Other';
+    _categoryController.text = reminder.category;
+    _selectedApplianceId = reminder.applianceId;
     _selectedDate = reminder.date;
     _selectedTime = _parseTime(reminder.time);
     _frequency = reminder.frequency;
@@ -145,8 +137,9 @@ class _EditReminderScreenState extends State<EditReminderScreen> {
     final updatedReminder = ReminderModel(
       id: widget.reminderId,
       userId: user.uid,
+      applianceId: _selectedApplianceId,
       title: _titleController.text.trim(),
-      category: _selectedCategory!,
+      category: _categoryController.text.trim(),
       location: _locationController.text.trim(),
       date: schedule.date,
       time: schedule.time.format(context),
@@ -262,26 +255,31 @@ class _EditReminderScreenState extends State<EditReminderScreen> {
               ),
               _field(
                 label: 'Category *',
-                child: DropdownButtonFormField<String>(
-                  initialValue: _selectedCategory,
-                  isExpanded: true,
-                  icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                  items: _categories
-                      .map(
-                        (category) => DropdownMenuItem(
-                          value: category,
-                          child: Text(category),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) =>
-                      setState(() => _selectedCategory = value),
-                  validator: (value) =>
-                      value == null ? 'Please select a category.' : null,
+                child: TextFormField(
+                  controller: _categoryController,
+                  textCapitalization: TextCapitalization.words,
+                  textInputAction: TextInputAction.next,
+                  decoration: const InputDecoration(
+                    hintText: 'E.g. Cleaning, Safety, Payment',
+                  ),
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Please enter a category.'
+                      : null,
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(
+                  bottom: AppConstants.paddingMedium,
+                ),
+                child: ApplianceSelectionField(
+                  label: 'Linked Appliance (Optional for legacy records)',
+                  selectedApplianceId: _selectedApplianceId,
+                  onChanged: (appliance) =>
+                      setState(() => _selectedApplianceId = appliance?.id),
                 ),
               ),
               _field(
-                label: 'Appliance / Location',
+                label: 'Location',
                 child: TextFormField(
                   controller: _locationController,
                   textCapitalization: TextCapitalization.words,
