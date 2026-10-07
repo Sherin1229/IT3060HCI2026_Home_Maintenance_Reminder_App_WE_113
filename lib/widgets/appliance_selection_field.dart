@@ -21,6 +21,7 @@ class ApplianceSelectionField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+
     if (user == null) {
       return const SizedBox.shrink();
     }
@@ -29,10 +30,13 @@ class ApplianceSelectionField extends StatelessWidget {
       stream: context.read<ApplianceProvider>().getUserAppliances(user.uid),
       builder: (context, snapshot) {
         final appliances = snapshot.data ?? const <ApplianceModel>[];
+
         final selectedExists = appliances.any(
           (appliance) => appliance.id == selectedApplianceId,
         );
-        final selectedMissing = selectedApplianceId != null && !selectedExists;
+
+        final selectedMissing =
+            selectedApplianceId != null && !selectedExists;
 
         if (snapshot.hasError) {
           return _ApplianceSelectorMessage(
@@ -63,63 +67,95 @@ class ApplianceSelectionField extends StatelessWidget {
             Text(
               label,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.w600,
-              ),
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w600,
+                  ),
             ),
             const SizedBox(height: 6),
+
             DropdownButtonFormField<String?>(
-              key: ValueKey('$selectedApplianceId-${appliances.length}'),
-              initialValue: selectedApplianceId,
-              decoration: InputDecoration(
-                hintText: snapshot.connectionState == ConnectionState.waiting
-                    ? 'Loading appliances...'
-                    : 'No linked appliance',
-                prefixIcon: const Icon(Icons.kitchen_outlined),
+              key: ValueKey(
+                '$selectedApplianceId-${appliances.length}',
               ),
+              initialValue: selectedApplianceId,
+
+              // Prevents horizontal overflow inside the dropdown field.
+              isExpanded: true,
+
+              decoration: InputDecoration(
+                hintText:
+                    snapshot.connectionState == ConnectionState.waiting
+                        ? 'Loading appliances...'
+                        : 'No linked appliance',
+                prefixIcon: const Icon(
+                  Icons.kitchen_outlined,
+                ),
+              ),
+
               items: [
                 const DropdownMenuItem<String?>(
                   value: null,
-                  child: Text('No linked appliance'),
+                  child: Text(
+                    'No linked appliance',
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
                 ),
+
                 if (selectedMissing)
                   DropdownMenuItem<String?>(
                     value: selectedApplianceId,
-                    child: const Text('Linked appliance is unavailable'),
+                    child: const Text(
+                      'Linked appliance is unavailable',
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
                   ),
+
                 ...appliances.map(
                   (appliance) => DropdownMenuItem<String?>(
                     value: appliance.id,
                     child: Text(
-                      '${appliance.applianceName} — ${appliance.brand} • ${appliance.modelNumber}',
+                      '${appliance.applianceName} — '
+                      '${appliance.brand} • '
+                      '${appliance.modelNumber}',
                       overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
                     ),
                   ),
                 ),
               ],
-              onChanged: snapshot.connectionState == ConnectionState.waiting
-                  ? null
-                  : (id) {
-                      ApplianceModel? selected;
-                      for (final appliance in appliances) {
-                        if (appliance.id == id) {
-                          selected = appliance;
-                          break;
-                        }
-                      }
-                      onChanged(selected);
-                    },
+
+              onChanged:
+                  snapshot.connectionState == ConnectionState.waiting
+                      ? null
+                      : (id) {
+                          ApplianceModel? selected;
+
+                          for (final appliance in appliances) {
+                            if (appliance.id == id) {
+                              selected = appliance;
+                              break;
+                            }
+                          }
+
+                          onChanged(selected);
+                        },
             ),
+
             if (selectedMissing) ...[
               const SizedBox(height: 6),
               Text(
-                'The previously linked appliance is unavailable. Select another appliance to change the relationship.',
+                'The previously linked appliance is unavailable. '
+                'Select another appliance to change the relationship.',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  fontSize: 12,
-                ),
+                      color:
+                          Theme.of(context).colorScheme.onSurfaceVariant,
+                      fontSize: 12,
+                    ),
               ),
             ],
+
             if (appliances.isEmpty && selectedMissing) ...[
               const SizedBox(height: 8),
               Align(
@@ -159,16 +195,18 @@ class _ApplianceSelectorMessage extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.w600,
-          ),
+                color: Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
+              ),
         ),
         const SizedBox(height: 6),
+
         Container(
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            color:
+                Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
               color: Theme.of(context).colorScheme.outlineVariant,
@@ -176,16 +214,24 @@ class _ApplianceSelectorMessage extends StatelessWidget {
           ),
           child: Column(
             children: [
-              Icon(icon, color: Theme.of(context).colorScheme.primary),
+              Icon(
+                icon,
+                color: Theme.of(context).colorScheme.primary,
+              ),
               const SizedBox(height: 8),
+
               Text(
                 message,
                 style: Theme.of(context).textTheme.bodyMedium,
                 textAlign: TextAlign.center,
               ),
+
               if (action != null) ...[
                 const SizedBox(height: 12),
-                SizedBox(width: double.infinity, child: action!),
+                SizedBox(
+                  width: double.infinity,
+                  child: action!,
+                ),
               ],
             ],
           ),
