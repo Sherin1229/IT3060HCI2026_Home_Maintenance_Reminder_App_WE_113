@@ -1,0 +1,143 @@
+import 'package:flutter/material.dart';
+
+import '../../../config/app_colors.dart';
+import '../../../utils/constants.dart';
+
+class ReminderCard extends StatelessWidget {
+  final String title;
+  final String location;
+  final String dueDate;
+  final String status;
+  final String timing;
+  final IconData applianceIcon;
+  final VoidCallback onTap;
+
+  const ReminderCard({
+    super.key,
+    required this.title,
+    required this.location,
+    required this.dueDate,
+    required this.status,
+    required this.timing,
+    required this.applianceIcon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final Color statusColor;
+    final Color statusBackground;
+
+    if (status == 'Completed') {
+      statusColor = AppColors.successText(context);
+      statusBackground = AppColors.successSurface(context);
+    } else if (status == 'Overdue') {
+      statusColor = colorScheme.error;
+      statusBackground = colorScheme.errorContainer;
+    } else {
+      statusColor = colorScheme.primary;
+      statusBackground = colorScheme.primaryContainer;
+    }
+
+    return Card(
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppConstants.borderRadiusLarge),
+        child: Padding(
+          padding: const EdgeInsets.all(AppConstants.paddingMedium),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 52,
+                height: 52,
+                decoration: BoxDecoration(
+                  color: AppColors.blueSurface(context),
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.borderRadiusMedium,
+                  ),
+                ),
+                child: Icon(
+                  applianceIcon,
+                  color: AppColors.primaryBlue,
+                  size: 26,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(location, style: theme.textTheme.bodyMedium),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today_outlined,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            dueDate,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: AppConstants.paddingSmall),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusBackground,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      status,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: statusColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: AppConstants.paddingSmall),
+                  Text(
+                    timing,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: statusColor,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.right,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
