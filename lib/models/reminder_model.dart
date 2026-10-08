@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class ReminderModel {
   final String id;
   final String userId;
+  final String? applianceId;
   final String title;
   final String category;
   final String location;
@@ -17,6 +18,7 @@ class ReminderModel {
   const ReminderModel({
     required this.id,
     required this.userId,
+    this.applianceId,
     required this.title,
     required this.category,
     required this.location,
@@ -32,6 +34,8 @@ class ReminderModel {
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
+      if (applianceId != null && applianceId!.trim().isNotEmpty)
+        'applianceId': applianceId!.trim(),
       'title': title,
       'category': category,
       'location': location,
@@ -49,6 +53,7 @@ class ReminderModel {
     return ReminderModel(
       id: id,
       userId: map['userId'] ?? '',
+      applianceId: _stringOrNull(map['applianceId']),
       title: map['title'] ?? '',
       category: map['category'] ?? '',
       location: map['location'] ?? '',
@@ -68,5 +73,10 @@ class ReminderModel {
     if (value is Timestamp) return value.toDate();
     if (value is DateTime) return value;
     return null;
+  }
+
+  static String? _stringOrNull(dynamic value) {
+    final text = value?.toString().trim();
+    return text == null || text.isEmpty ? null : text;
   }
 }

@@ -9,6 +9,7 @@ import '../../models/reminder_model.dart';
 import '../../providers/reminder_provider.dart';
 import '../../utils/constants.dart';
 import '../../widgets/primary_button.dart';
+import '../../widgets/appliance_selection_field.dart';
 import 'reminder_schedule_screen.dart';
 import 'widgets/reminder_schedule_card.dart';
 
@@ -20,21 +21,12 @@ class CreateReminderScreen extends StatefulWidget {
 }
 
 class _CreateReminderScreenState extends State<CreateReminderScreen> {
-  static const _categories = [
-    'HVAC',
-    'Refrigerator',
-    'Water Filter',
-    'Washing Machine',
-    'Electrical',
-    'Plumbing',
-    'Other',
-  ];
-
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
+  final _categoryController = TextEditingController();
   final _locationController = TextEditingController();
   final _notesController = TextEditingController();
-  String? _selectedCategory;
+  String? _selectedApplianceId;
   ReminderScheduleSelection? _schedule;
   bool _hasAttemptedSubmit = false;
   bool _showScheduleError = false;
@@ -42,6 +34,7 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
   @override
   void dispose() {
     _titleController.dispose();
+    _categoryController.dispose();
     _locationController.dispose();
     _notesController.dispose();
     super.dispose();
@@ -103,8 +96,9 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
     final reminder = ReminderModel(
       id: '',
       userId: user.uid,
+      applianceId: _selectedApplianceId,
       title: _titleController.text.trim(),
-      category: _selectedCategory!,
+      category: _categoryController.text.trim(),
       location: _locationController.text.trim(),
       date: schedule.date,
       time: schedule.time.format(context),
@@ -149,7 +143,7 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
           Text(
             label,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -163,7 +157,7 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         centerTitle: true,
         title: const Text('Create Reminder'),
@@ -191,6 +185,17 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Padding(
+                  padding: const EdgeInsets.only(
+                    bottom: AppConstants.paddingMedium,
+                  ),
+                  child: ApplianceSelectionField(
+                    label: 'Appliance (Optional)',
+                    selectedApplianceId: _selectedApplianceId,
+                    onChanged: (appliance) =>
+                        setState(() => _selectedApplianceId = appliance?.id),
+                  ),
+                ),
                 _field(
                   label: 'Title *',
                   child: TextFormField(
@@ -207,38 +212,26 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                 ),
                 _field(
                   label: 'Category *',
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _selectedCategory,
-                    isExpanded: true,
+                  child: TextFormField(
+                    controller: _categoryController,
+                    textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
-                      hintText: 'Select a category',
+                      hintText: 'E.g. Cleaning, Safety, Payment',
                     ),
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                    items: _categories
-                        .map(
-                          (category) => DropdownMenuItem(
-                            value: category,
-                            child: Text(category),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedCategory = value;
-                      });
-                    },
-                    validator: (value) =>
-                        value == null ? 'Please select a category.' : null,
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Please enter a category.'
+                        : null,
                   ),
                 ),
                 _field(
-                  label: 'Appliance / Location',
+                  label: 'Location',
                   child: TextFormField(
                     controller: _locationController,
                     textCapitalization: TextCapitalization.words,
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
-                      hintText: 'E.g. Living Room AC',
+                      hintText: 'E.g. Living Room',
                     ),
                   ),
                 ),

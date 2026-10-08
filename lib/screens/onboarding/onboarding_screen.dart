@@ -75,7 +75,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -83,7 +83,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             return Stack(
               fit: StackFit.expand,
               children: [
-                const CustomPaint(painter: _OnboardingBackgroundPainter()),
+                CustomPaint(
+                  painter: _OnboardingBackgroundPainter(
+                    backColor: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF10253A)
+                        : const Color(0xFFE9F6FF),
+                    frontColor: Theme.of(context).brightness == Brightness.dark
+                        ? const Color(0xFF15314B)
+                        : const Color(0xFFD9F0FF),
+                  ),
+                ),
                 Column(
                   children: [
                     _OnboardingHeader(
@@ -156,7 +165,7 @@ class _OnboardingHeader extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: selected
                         ? AppColors.primaryBlue
-                        : const Color(0xFFD7E4F2),
+                        : Theme.of(context).colorScheme.outlineVariant,
                     borderRadius: BorderRadius.circular(8),
                   ),
                 );
@@ -168,7 +177,9 @@ class _OnboardingHeader extends StatelessWidget {
                 child: TextButton(
                   onPressed: onSkip,
                   style: TextButton.styleFrom(
-                    foregroundColor: AppColors.textSecondary,
+                    foregroundColor: Theme.of(
+                      context,
+                    ).colorScheme.onSurfaceVariant,
                     minimumSize: const Size(64, 48),
                   ),
                   child: const Text(
@@ -218,10 +229,15 @@ class _OnboardingPage extends StatelessWidget {
                     Container(
                       width: illustrationHeight * .86,
                       height: illustrationHeight * .86,
-                      decoration: const BoxDecoration(
+                      decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         gradient: RadialGradient(
-                          colors: [Color(0xFFE8F8FC), Color(0x00E8F8FC)],
+                          colors: [
+                            Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF173A4D)
+                                : const Color(0xFFE8F8FC),
+                            Colors.transparent,
+                          ],
                         ),
                       ),
                     ),
@@ -250,7 +266,7 @@ class _OnboardingPage extends StatelessWidget {
                     maxLines: 1,
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: AppColors.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: titleSize,
                       fontWeight: FontWeight.w800,
                       letterSpacing: -.55,
@@ -268,7 +284,7 @@ class _OnboardingPage extends StatelessWidget {
                   overflow: TextOverflow.visible,
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                     fontSize: compact ? 14 : 15.5,
                     height: 1.4,
                   ),
@@ -337,7 +353,13 @@ class _OnboardingAction extends StatelessWidget {
 }
 
 class _OnboardingBackgroundPainter extends CustomPainter {
-  const _OnboardingBackgroundPainter();
+  const _OnboardingBackgroundPainter({
+    required this.backColor,
+    required this.frontColor,
+  });
+
+  final Color backColor;
+  final Color frontColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -362,7 +384,7 @@ class _OnboardingBackgroundPainter extends CustomPainter {
       ..lineTo(size.width, size.height)
       ..lineTo(0, size.height)
       ..close();
-    canvas.drawPath(backWave, Paint()..color = const Color(0xFFE9F6FF));
+    canvas.drawPath(backWave, Paint()..color = backColor);
 
     final frontWave = Path()
       ..moveTo(0, size.height * .87)
@@ -385,7 +407,7 @@ class _OnboardingBackgroundPainter extends CustomPainter {
       ..lineTo(size.width, size.height)
       ..lineTo(0, size.height)
       ..close();
-    canvas.drawPath(frontWave, Paint()..color = const Color(0xFFD9F0FF));
+    canvas.drawPath(frontWave, Paint()..color = frontColor);
   }
 
   @override

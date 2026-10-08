@@ -1,13 +1,24 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
 import '../../config/app_colors.dart';
 import '../../models/appliance_model.dart';
+import '../../models/maintenance_model.dart';
+import '../../models/reminder_model.dart';
+import '../../providers/appliance_provider.dart';
+import '../../providers/maintenance_provider.dart';
+import '../../providers/reminder_provider.dart';
+import '../../services/warranty_service.dart';
 import '../../utils/constants.dart';
 
 class ApplianceDetailsScreen extends StatefulWidget {
-  final ApplianceItem? appliance;
+  final String? applianceId;
+  final ApplianceModel? appliance;
 
-  const ApplianceDetailsScreen({super.key, this.appliance});
+  const ApplianceDetailsScreen({super.key, this.applianceId, this.appliance});
 
   @override
   State<ApplianceDetailsScreen> createState() => _ApplianceDetailsScreenState();
@@ -15,17 +26,8 @@ class ApplianceDetailsScreen extends StatefulWidget {
 
 class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
   int _selectedTabIndex = 0;
-  bool _item1Completed = false;
 
-  late ApplianceItem _item;
-
-  @override
-  void initState() {
-    super.initState();
-    _item = widget.appliance ?? ApplianceItem.sampleAppliances.first;
-  }
-
-  void _showDeleteConfirmationDialog() {
+  void _showDeleteConfirmationDialog(ApplianceModel appliance) {
     showDialog(
       context: context,
       builder: (ctx) {
@@ -38,34 +40,48 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
             style: TextStyle(fontWeight: FontWeight.bold),
           ),
           content: Text(
-            'Are you sure you want to delete ${_item.name}? This action will remove all associated records.',
+            'Are you sure you want to delete ${appliance.applianceName}? This action cannot be undone.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: AppColors.textSecondary),
-              ),
+              child: const Text('Cancel'),
             ),
             ElevatedButton(
-              onPressed: () {
+              onPressed: () async {
                 Navigator.pop(ctx);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      '${_item.name} deletion requested (UI Demonstration).',
+                final user = FirebaseAuth.instance.currentUser;
+                if (user == null) return;
+
+                final success = await context
+                    .read<ApplianceProvider>()
+                    .deleteAppliance(
+                      applianceId: appliance.id,
+                      userId: user.uid,
+                    );
+
+                if (!mounted) return;
+
+                if (success) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Appliance deleted successfully.'),
+                      backgroundColor: AppColors.success,
                     ),
-                    backgroundColor: AppColors.error,
-                  ),
-                );
+                  );
+                  context.pop();
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Failed to delete appliance.'),
+                      backgroundColor: AppColors.error,
+                    ),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.error,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
               ),
               child: const Text('Delete'),
             ),
@@ -75,12 +91,32 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
     );
   }
 
+  String _formatDate(DateTime date) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+
   @override
   Widget build(BuildContext context) {
+    final effectiveId = widget.applianceId ?? widget.appliance?.id ?? '';
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(
@@ -98,181 +134,115 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
           ),
         ),
         centerTitle: true,
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(
-              Icons.more_vert_rounded,
-              color: AppColors.textPrimary,
-            ),
-            onSelected: (value) {
-              if (value == 'delete') {
-                _showDeleteConfirmationDialog();
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('$value selected'),
-                    duration: const Duration(seconds: 1),
-                  ),
-                );
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'Edit Details',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.edit_outlined,
-                      size: 18,
-                      color: AppColors.textPrimary,
-                    ),
-                    SizedBox(width: 8),
-                    Text('Edit Details'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'Share',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.share_outlined,
-                      size: 18,
-                      color: AppColors.textPrimary,
-                    ),
-                    SizedBox(width: 8),
-                    Text('Share Details'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'delete',
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.delete_outline_rounded,
-                      size: 18,
-                      color: AppColors.error,
-                    ),
-                    SizedBox(width: 8),
-                    Text(
-                      'Delete Appliance',
-                      style: TextStyle(color: AppColors.error),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppConstants.paddingMedium,
-            vertical: 8.0,
+        child: StreamBuilder<ApplianceModel?>(
+          stream: context.read<ApplianceProvider>().getApplianceById(
+            effectiveId,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Main Appliance Info Card
-              _buildMainApplianceCard(context),
-              const SizedBox(height: 16),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                widget.appliance == null) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-              // Filter Life Card
-              _buildFilterLifeCard(context),
-              const SizedBox(height: 16),
+            final appliance = snapshot.data ?? widget.appliance;
 
-              // Warranty Info Card
-              _buildWarrantyInfoCard(context),
-              const SizedBox(height: 16),
+            if (appliance == null) {
+              return const Center(child: Text('Appliance details not found.'));
+            }
 
-              // Maintenance Section (Tabs)
-              _buildMaintenanceSectionCard(context),
-              const SizedBox(height: 24),
-            ],
-          ),
+            final user = FirebaseAuth.instance.currentUser;
+            if (user == null) {
+              return const Center(
+                child: Text('Please log in to view appliance details.'),
+              );
+            }
+
+            return SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.paddingMedium,
+                vertical: 8.0,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Main Appliance Info Card
+                  _buildMainApplianceCard(context, appliance),
+                  const SizedBox(height: 16),
+
+                  _buildWarrantySection(context, appliance.id, user.uid),
+                  const SizedBox(height: 16),
+
+                  // Maintenance & Reminders Section (Tabs)
+                  _buildMaintenanceSectionCard(context, appliance.id, user.uid),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildMainApplianceCard(BuildContext context) {
+  Widget _buildMainApplianceCard(
+    BuildContext context,
+    ApplianceModel appliance,
+  ) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x05000000),
-            blurRadius: 10,
-            offset: Offset(0, 3),
-          ),
-        ],
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Appliance Top Image / Banner Container
+            // Appliance Photo / Visual Box
             Container(
               height: 180,
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(16),
-                color: const Color(0xFFF1F5F9),
+                color: AppColors.blueSurface(context),
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    // Mock Refrigerator Illustration Graphic
-                    Container(
-                      color: const Color(0xFFE2E8F0),
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withAlpha(200),
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.kitchen_rounded,
-                                size: 54,
-                                color: AppColors.primaryBlue,
-                              ),
+                child:
+                    appliance.photoUrl != null && appliance.photoUrl!.isNotEmpty
+                    ? Image.network(
+                        appliance.photoUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Center(
+                            child: Icon(
+                              appliance.categoryIcon,
+                              size: 64,
+                              color: AppColors.primaryBlue,
                             ),
-                            const SizedBox(height: 8),
-                            const Text(
-                              'Smart Refrigerator Illustration',
-                              style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
+                          );
+                        },
+                      )
+                    : Center(
+                        child: Icon(
+                          appliance.categoryIcon,
+                          size: 64,
+                          color: AppColors.primaryBlue,
                         ),
                       ),
-                    ),
-                  ],
-                ),
               ),
             ),
             const SizedBox(height: 16),
 
-            // Category & Status Badge Row
+            // Category Label
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  _item.category.toUpperCase(),
+                  appliance.category.toUpperCase(),
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
@@ -280,54 +250,25 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                     letterSpacing: 1.0,
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEFF6FF), // Light blue tint
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Row(
-                    children: const [
-                      Icon(
-                        Icons.check_circle_rounded,
-                        size: 14,
-                        color: AppColors.primaryBlue,
-                      ),
-                      SizedBox(width: 4),
-                      Text(
-                        'Active Warranty',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primaryBlue,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
             const SizedBox(height: 6),
 
-            // Title & Description
+            // Appliance Title & Brand
             Text(
-              _item.name,
+              appliance.applianceName,
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
                 letterSpacing: -0.3,
               ),
             ),
             const SizedBox(height: 4),
             Text(
-              _item.description ?? 'Samsung Family Hub 4-Door French Door',
-              style: const TextStyle(
+              '${appliance.brand} ${appliance.modelNumber}',
+              style: TextStyle(
                 fontSize: 14,
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 16),
@@ -342,11 +283,11 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                     children: [
                       _buildGridLabel('Brand'),
                       const SizedBox(height: 2),
-                      _buildGridValue(_item.brand),
+                      _buildGridValue(appliance.brand),
                       const SizedBox(height: 12),
                       _buildGridLabel('Purchase Date'),
                       const SizedBox(height: 2),
-                      _buildGridValue(_item.purchaseDate ?? 'Oct 12, 2022'),
+                      _buildGridValue(_formatDate(appliance.purchaseDate)),
                     ],
                   ),
                 ),
@@ -356,17 +297,12 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                     children: [
                       _buildGridLabel('Model No.'),
                       const SizedBox(height: 2),
-                      _buildGridValue(_item.modelNumber),
+                      _buildGridValue(appliance.modelNumber),
                       const SizedBox(height: 12),
-                      _buildGridLabel('Next Service'),
+                      _buildGridLabel('Serial No.'),
                       const SizedBox(height: 2),
-                      Text(
-                        _item.nextMaintenanceDate,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.primaryBlue,
-                        ),
+                      _buildGridValue(
+                        appliance.serialNumber ?? 'Not specified',
                       ),
                     ],
                   ),
@@ -375,61 +311,23 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
             ),
             const SizedBox(height: 20),
 
-            // Action Buttons Row
+            // Appliance management actions
             Row(
               children: [
-                // 1. Add Reminder Button
                 Expanded(
-                  flex: 3,
                   child: SizedBox(
                     height: 44,
                     child: ElevatedButton.icon(
                       onPressed: () {
-                        context.push('/reminders/create');
+                        context.push('/appliances/edit', extra: appliance);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryBlue,
-                        foregroundColor: Colors.white,
-                        elevation: 0,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      icon: const Icon(
-                        Icons.notifications_active_outlined,
-                        size: 18,
-                      ),
-                      label: const Text(
-                        'Add Reminder',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 8),
-
-                // 2. Edit Details Button
-                Expanded(
-                  flex: 3,
-                  child: SizedBox(
-                    height: 44,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Edit Appliance screen ready for implementation.',
-                            ),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFF1F5F9),
-                        foregroundColor: AppColors.textPrimary,
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainerHighest,
+                        foregroundColor: Theme.of(
+                          context,
+                        ).colorScheme.onSurface,
                         elevation: 0,
                         padding: const EdgeInsets.symmetric(horizontal: 8),
                         shape: RoundedRectangleBorder(
@@ -449,14 +347,13 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
                 ),
                 const SizedBox(width: 8),
 
-                // 3. Delete Icon Button
                 SizedBox(
                   height: 44,
                   width: 44,
                   child: IconButton(
-                    onPressed: _showDeleteConfirmationDialog,
+                    onPressed: () => _showDeleteConfirmationDialog(appliance),
                     style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFFFEF2F2),
+                      backgroundColor: AppColors.errorSurface(context),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
@@ -476,242 +373,163 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
     );
   }
 
-  Widget _buildFilterLifeCard(BuildContext context) {
-    const filterPercent = 24;
-
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x05000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: const [
-              Icon(Icons.tune_rounded, color: AppColors.primaryBlue, size: 22),
-              SizedBox(width: 8),
-              Text(
-                'Filter Life',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: const [
-              Text(
-                'Water Filter',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textPrimary,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                '$filterPercent%',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          // Progress Bar
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: filterPercent / 100.0,
-              minHeight: 8,
-              backgroundColor: const Color(0xFFE2E8F0),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                Color(0xFFEAB308),
-              ), // Warning Amber
+  Widget _buildWarrantySection(
+    BuildContext context,
+    String applianceId,
+    String userId,
+  ) {
+    return StreamBuilder(
+      stream: WarrantyService().getUserWarranties(userId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Card(
+            child: Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator()),
             ),
-          ),
-          const SizedBox(height: 6),
-
-          const Align(
-            alignment: Alignment.centerRight,
-            child: Text(
-              'Replace soon',
-              style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-            ),
-          ),
-          const SizedBox(height: 14),
-
-          // Order Replacement Button
-          SizedBox(
-            width: double.infinity,
-            height: 44,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Order replacement request initiated.'),
+          );
+        }
+        if (snapshot.hasError) {
+          return const _LinkedSectionMessage(
+            icon: Icons.error_outline_rounded,
+            title: 'Unable to load linked warranty',
+          );
+        }
+        final documents = (snapshot.data?.docs ?? const [])
+            .where((document) => document.data()['applianceId'] == applianceId)
+            .toList();
+        if (documents.isEmpty) {
+          return const _LinkedSectionMessage(
+            icon: Icons.verified_user_outlined,
+            title: 'No warranty linked to this appliance',
+          );
+        }
+        documents.sort((a, b) {
+          final aDate = a.data()['warrantyEndDate'];
+          final bDate = b.data()['warrantyEndDate'];
+          final aValue = aDate is Timestamp ? aDate.toDate() : DateTime(9999);
+          final bValue = bDate is Timestamp ? bDate.toDate() : DateTime(9999);
+          return aValue.compareTo(bValue);
+        });
+        final document = documents.first;
+        final data = document.data();
+        final endDateValue = data['warrantyEndDate'];
+        final endDate = endDateValue is Timestamp
+            ? endDateValue.toDate()
+            : endDateValue is DateTime
+            ? endDateValue
+            : null;
+        final provider = data['provider']?.toString().trim();
+        final today = DateUtils.dateOnly(DateTime.now());
+        final normalizedEnd = endDate == null
+            ? null
+            : DateUtils.dateOnly(endDate);
+        final daysLeft = normalizedEnd?.difference(today).inDays;
+        final status = daysLeft == null
+            ? 'Unknown'
+            : daysLeft < 0
+            ? 'Expired'
+            : daysLeft <= 30
+            ? 'Expiring Soon'
+            : 'Active';
+        final statusColor = status == 'Expired'
+            ? Theme.of(context).colorScheme.error
+            : status == 'Expiring Soon'
+            ? AppColors.warningText(context)
+            : status == 'Active'
+            ? AppColors.successText(context)
+            : Theme.of(context).colorScheme.onSurfaceVariant;
+        final statusBackground = status == 'Expired'
+            ? AppColors.errorSurface(context)
+            : status == 'Expiring Soon'
+            ? AppColors.warningSurface(context)
+            : status == 'Active'
+            ? AppColors.successSurface(context)
+            : AppColors.neutralSurface(context);
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Warranty',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  provider == null || provider.isEmpty
+                      ? 'Provider not specified'
+                      : provider,
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 5,
                   ),
-                );
-              },
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primaryBlue,
-                side: const BorderSide(color: AppColors.border),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              icon: const Icon(Icons.shopping_cart_outlined, size: 18),
-              label: const Text(
-                'Order Replacement',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWarrantyInfoCard(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x05000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          // Background watermark badge icon
-          Positioned(
-            right: 0,
-            top: 0,
-            child: Icon(
-              Icons.verified_rounded,
-              size: 80,
-              color: const Color(0xFFF1F5F9).withAlpha(200),
-            ),
-          ),
-
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: const [
-                  Icon(
-                    Icons.shield_outlined,
-                    color: AppColors.primaryBlue,
-                    size: 22,
+                  decoration: BoxDecoration(
+                    color: statusBackground,
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                  SizedBox(width: 8),
-                  Text(
-                    'Warranty Info',
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textPrimary,
+                  child: Text(
+                    status,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: statusColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12,
                     ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  endDate == null
+                      ? 'Expiry date unavailable'
+                      : 'Expires ${_formatDate(endDate)}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () =>
+                      context.push('/warranties/details', extra: document.id),
+                  icon: const Icon(Icons.description_outlined),
+                  label: Text(
+                    data['documentUrl']?.toString().trim().isNotEmpty == true
+                        ? 'View Policy Document'
+                        : 'View Warranty Details',
+                  ),
+                ),
+                if (documents.length > 1) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    '${documents.length} linked warranties',
+                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ],
-              ),
-              const SizedBox(height: 16),
-
-              _buildGridLabel('Provider'),
-              const SizedBox(height: 2),
-              _buildGridValue(
-                _item.warrantyProvider ?? 'Samsung Extended Care',
-              ),
-              const SizedBox(height: 12),
-
-              _buildGridLabel('Expires'),
-              const SizedBox(height: 2),
-              Text(
-                _item.warrantyExpiry ?? 'Oct 12, 2025 (1y 6m left)',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // View Policy Document Button
-              SizedBox(
-                width: double.infinity,
-                height: 44,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Opening policy document...'),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF1F5F9),
-                    foregroundColor: AppColors.primaryBlue,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  icon: const Icon(Icons.visibility_outlined, size: 18),
-                  label: const Text(
-                    'View Policy Document',
-                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildMaintenanceSectionCard(BuildContext context) {
+  Widget _buildMaintenanceSectionCard(
+    BuildContext context,
+    String applianceId,
+    String userId,
+  ) {
     return Container(
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x05000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Tabs
           Row(
             children: [
               _buildTabItem(0, 'Upcoming'),
@@ -721,15 +539,164 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
               _buildTabItem(2, 'Manuals'),
             ],
           ),
-          const Divider(height: 1, color: AppColors.border),
-          const SizedBox(height: 16),
+          const Divider(height: 16),
 
-          // Tab Content
-          if (_selectedTabIndex == 0) _buildUpcomingTab(context),
-          if (_selectedTabIndex == 1) _buildHistoryTab(context),
-          if (_selectedTabIndex == 2) _buildManualsTab(context),
+          if (_selectedTabIndex == 0)
+            _buildUpcomingContent(context, applianceId, userId),
+          if (_selectedTabIndex == 1)
+            _buildHistoryContent(context, applianceId, userId),
+          if (_selectedTabIndex == 2)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Center(
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.description_outlined,
+                      size: 36,
+                      color: AppColors.textSecondary,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'No user manuals or guides uploaded.',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
         ],
       ),
+    );
+  }
+
+  Widget _buildUpcomingContent(
+    BuildContext context,
+    String applianceId,
+    String userId,
+  ) {
+    return StreamBuilder<List<ReminderModel>>(
+      stream: context.read<ReminderProvider>().getReminders(userId),
+      builder: (context, reminderSnapshot) {
+        return StreamBuilder<List<MaintenanceRecord>>(
+          stream: context.read<MaintenanceProvider>().getRecords(userId),
+          builder: (context, maintenanceSnapshot) {
+            if ((reminderSnapshot.connectionState == ConnectionState.waiting &&
+                    !reminderSnapshot.hasData) ||
+                (maintenanceSnapshot.connectionState ==
+                        ConnectionState.waiting &&
+                    !maintenanceSnapshot.hasData)) {
+              return const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+            if (reminderSnapshot.hasError || maintenanceSnapshot.hasError) {
+              return const _InlineEmptyState(
+                icon: Icons.error_outline_rounded,
+                message: 'Unable to load linked activity.',
+              );
+            }
+            final today = DateUtils.dateOnly(DateTime.now());
+            final reminders = (reminderSnapshot.data ?? const [])
+                .where(
+                  (item) =>
+                      item.applianceId == applianceId &&
+                      !item.isCompleted &&
+                      !DateUtils.dateOnly(item.date).isBefore(today),
+                )
+                .toList();
+            final maintenance = (maintenanceSnapshot.data ?? const [])
+                .where(
+                  (item) =>
+                      item.applianceId == applianceId &&
+                      item.status == MaintenanceStatus.upcoming,
+                )
+                .toList();
+            if (reminders.isEmpty && maintenance.isEmpty) {
+              return const _InlineEmptyState(
+                icon: Icons.event_available_outlined,
+                message: 'No upcoming reminders or maintenance.',
+              );
+            }
+            return Column(
+              children: [
+                for (final reminder in reminders)
+                  _LinkedActivityTile(
+                    icon: Icons.alarm_outlined,
+                    title: reminder.title,
+                    subtitle: _formatDate(reminder.date),
+                    onTap: () =>
+                        context.push('/reminders/details', extra: reminder.id),
+                  ),
+                for (final record in maintenance)
+                  _LinkedActivityTile(
+                    icon: record.icon,
+                    title: record.title,
+                    subtitle: _formatDate(record.scheduledDate),
+                    onTap: () =>
+                        context.push('/maintenance/details', extra: record.id),
+                  ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildHistoryContent(
+    BuildContext context,
+    String applianceId,
+    String userId,
+  ) {
+    return StreamBuilder<List<MaintenanceRecord>>(
+      stream: context.read<MaintenanceProvider>().getRecords(userId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          );
+        }
+        if (snapshot.hasError) {
+          return const _InlineEmptyState(
+            icon: Icons.error_outline_rounded,
+            message: 'Unable to load maintenance history.',
+          );
+        }
+        final records = (snapshot.data ?? const [])
+            .where(
+              (item) =>
+                  item.applianceId == applianceId &&
+                  item.status == MaintenanceStatus.completed,
+            )
+            .toList();
+        if (records.isEmpty) {
+          return const _InlineEmptyState(
+            icon: Icons.history_toggle_off_rounded,
+            message: 'No linked maintenance history.',
+          );
+        }
+        return Column(
+          children: [
+            for (final record in records)
+              _LinkedActivityTile(
+                icon: record.icon,
+                title: record.title,
+                subtitle: _formatDate(
+                  record.completedDate ?? record.scheduledDate,
+                ),
+                onTap: () =>
+                    context.push('/maintenance/details', extra: record.id),
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -743,22 +710,20 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
       },
       child: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                color: isSelected
-                    ? AppColors.primaryBlue
-                    : AppColors.textSecondary,
-              ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+              color: isSelected
+                  ? AppColors.primaryBlue
+                  : Theme.of(context).colorScheme.onSurfaceVariant,
             ),
           ),
+          const SizedBox(height: 4),
           Container(
             height: 2,
-            width: 50,
+            width: 40,
             color: isSelected ? AppColors.primaryBlue : Colors.transparent,
           ),
         ],
@@ -766,246 +731,12 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
     );
   }
 
-  Widget _buildUpcomingTab(BuildContext context) {
-    return Column(
-      children: [
-        // Maintenance Item 1
-        IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Icon Node & Vertical Line
-              Column(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFE0F2FE),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.water_drop_outlined,
-                      size: 18,
-                      color: AppColors.primaryBlue,
-                    ),
-                  ),
-                  Expanded(
-                    child: Container(width: 2, color: const Color(0xFFE2E8F0)),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 12),
-
-              // Item 1 Content Box
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF8FAFC),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text(
-                            'Replace Water Filter',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFEFF6FF),
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Text(
-                              'In 2 weeks',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.primaryBlue,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Model HAF-QIN/EXP needed.\nLast replaced 5 months ago.',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                          height: 1.3,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _item1Completed = !_item1Completed;
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                _item1Completed
-                                    ? 'Task marked complete!'
-                                    : 'Task marked incomplete',
-                              ),
-                              duration: const Duration(seconds: 1),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          _item1Completed ? 'Completed ✓' : 'Mark Complete',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: _item1Completed
-                                ? AppColors.success
-                                : AppColors.primaryBlue,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        // Maintenance Item 2
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: const BoxDecoration(
-                color: Color(0xFFF1F5F9),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.cleaning_services_outlined,
-                size: 18,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(width: 12),
-
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Text(
-                          'Deep Clean Coils',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textPrimary,
-                          ),
-                        ),
-                        Text(
-                          'Oct 2024',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'Annual maintenance to ensure cooling efficiency.',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: AppColors.textSecondary,
-                        height: 1.3,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildHistoryTab(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24.0),
-      child: Center(
-        child: Column(
-          children: const [
-            Icon(
-              Icons.history_toggle_off_rounded,
-              size: 40,
-              color: AppColors.textSecondary,
-            ),
-            SizedBox(height: 8),
-            Text(
-              'No maintenance history recorded yet',
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildManualsTab(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 24.0),
-      child: Center(
-        child: Column(
-          children: const [
-            Icon(
-              Icons.description_outlined,
-              size: 40,
-              color: AppColors.textSecondary,
-            ),
-            SizedBox(height: 8),
-            Text(
-              'No user manuals or guides uploaded',
-              style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildGridLabel(String label) {
     return Text(
       label,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 12,
-        color: AppColors.textSecondary,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
         fontWeight: FontWeight.w500,
       ),
     );
@@ -1014,11 +745,87 @@ class _ApplianceDetailsScreenState extends State<ApplianceDetailsScreen> {
   Widget _buildGridValue(String value) {
     return Text(
       value,
-      style: const TextStyle(
-        fontSize: 15,
-        fontWeight: FontWeight.bold,
-        color: AppColors.textPrimary,
+      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+    );
+  }
+}
+
+class _LinkedSectionMessage extends StatelessWidget {
+  final IconData icon;
+  final String title;
+
+  const _LinkedSectionMessage({required this.icon, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+        child: Row(
+          children: [
+            Icon(icon, color: Theme.of(context).colorScheme.onSurfaceVariant),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(title, style: Theme.of(context).textTheme.bodyMedium),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _InlineEmptyState extends StatelessWidget {
+  final IconData icon;
+  final String message;
+
+  const _InlineEmptyState({required this.icon, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 20),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            size: 34,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: Theme.of(context).textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LinkedActivityTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  const _LinkedActivityTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      trailing: const Icon(Icons.chevron_right_rounded),
+      onTap: onTap,
     );
   }
 }

@@ -1,7 +1,11 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
 import '../../config/app_colors.dart';
 import '../../models/appliance_model.dart';
+import '../../providers/appliance_provider.dart';
 import '../../utils/constants.dart';
 
 class AppliancesScreen extends StatefulWidget {
@@ -13,52 +17,76 @@ class AppliancesScreen extends StatefulWidget {
 
 class _AppliancesScreenState extends State<AppliancesScreen> {
   final TextEditingController _searchController = TextEditingController();
-  List<ApplianceItem> _allAppliances = [];
-  List<ApplianceItem> _filteredAppliances = [];
-  String _selectedStatusFilter = 'All';
+  String _selectedCategory = 'All';
+  List<ApplianceModel> _currentAppliances = const [];
 
   @override
   void initState() {
     super.initState();
-    _allAppliances = ApplianceItem.sampleAppliances;
-    _filteredAppliances = List.from(_allAppliances);
-    _searchController.addListener(_applyFilters);
+    _searchController.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
-    _searchController.removeListener(_applyFilters);
     _searchController.dispose();
     super.dispose();
   }
 
-  void _applyFilters() {
+  List<ApplianceModel> _filterList(List<ApplianceModel> list) {
     final query = _searchController.text.toLowerCase().trim();
-    setState(() {
-      _filteredAppliances = _allAppliances.where((appliance) {
-        final matchesQuery =
-            appliance.name.toLowerCase().contains(query) ||
-            appliance.modelNumber.toLowerCase().contains(query) ||
-            appliance.brand.toLowerCase().contains(query);
-        final matchesStatus =
-            _selectedStatusFilter == 'All' ||
-            appliance.status.toLowerCase() ==
-                _selectedStatusFilter.toLowerCase();
-        return matchesQuery && matchesStatus;
-      }).toList();
-    });
+
+    return list.where((item) {
+      final matchesQuery =
+          query.isEmpty ||
+          item.applianceName.toLowerCase().contains(query) ||
+          item.brand.toLowerCase().contains(query) ||
+          item.modelNumber.toLowerCase().contains(query) ||
+          item.category.toLowerCase().contains(query);
+
+      final matchesCategory =
+          _selectedCategory == 'All' ||
+          item.category.toLowerCase() == _selectedCategory.toLowerCase();
+
+      return matchesQuery && matchesCategory;
+    }).toList();
   }
 
-  void _showFilterBottomSheet() {
+  List<String> _filterCategories(List<ApplianceModel> appliances) {
+    final categoriesByLowercase = <String, String>{};
+    for (final appliance in appliances) {
+      final category = appliance.category.trim();
+      if (category.isNotEmpty) {
+        categoriesByLowercase.putIfAbsent(
+          category.toLowerCase(),
+          () => category,
+        );
+      }
+    }
+    if (_selectedCategory != 'All') {
+      categoriesByLowercase.putIfAbsent(
+        _selectedCategory.toLowerCase(),
+        () => _selectedCategory,
+      );
+    }
+
+    final categories = categoriesByLowercase.values.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return ['All', ...categories];
+  }
+
+  void _showFilterBottomSheet(List<ApplianceModel> appliances) {
+    final filterCategories = _filterCategories(appliances);
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (ctx) {
         return StatefulBuilder(
           builder: (context, setModalState) {
-            return Padding(
+            return SingleChildScrollView(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppConstants.paddingMedium,
                 vertical: AppConstants.paddingLarge,
@@ -71,11 +99,10 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Filter Appliances',
+                        'Filter by Category',
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
                         ),
                       ),
                       IconButton(
@@ -85,36 +112,18 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                     ],
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'Status',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
-                    children: ['All', 'Active', 'Expiring'].map((status) {
-                      final isSelected = _selectedStatusFilter == status;
+                    runSpacing: 8,
+                    children: filterCategories.map((cat) {
+                      final isSelected = _selectedCategory == cat;
                       return ChoiceChip(
-                        label: Text(status),
+                        label: Text(cat),
                         selected: isSelected,
-                        selectedColor: AppColors.primaryBlue.withAlpha(38),
-                        labelStyle: TextStyle(
-                          color: isSelected
-                              ? AppColors.primaryBlue
-                              : AppColors.textPrimary,
-                          fontWeight: isSelected
-                              ? FontWeight.bold
-                              : FontWeight.normal,
-                        ),
                         onSelected: (selected) {
                           if (selected) {
                             setState(() {
-                              _selectedStatusFilter = status;
-                              _applyFilters();
+                              _selectedCategory = cat;
                             });
                             setModalState(() {});
                           }
@@ -127,12 +136,6 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () => Navigator.pop(ctx),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primaryBlue,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
                       child: const Text('Apply Filter'),
                     ),
                   ),
@@ -147,14 +150,17 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Stack(
           children: [
             Column(
               children: [
-                // Top Header
+                // Top Header (WITHOUT Notification Bell as per rules)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppConstants.paddingMedium,
@@ -165,35 +171,22 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'My Appliances',
                         style: TextStyle(
                           fontSize: 26,
                           fontWeight: FontWeight.bold,
-                          color: AppColors.primaryDark,
+                          color: isDark
+                              ? AppColors.darkTextPrimary
+                              : AppColors.primaryDark,
                           letterSpacing: -0.5,
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.notifications_none_rounded,
-                          size: 26,
-                          color: AppColors.textPrimary,
-                        ),
-                        onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Notifications checked'),
-                              duration: Duration(seconds: 1),
-                            ),
-                          );
-                        },
                       ),
                     ],
                   ),
                 ),
 
-                // Search & Filter Row
+                // Search & Category Filter Row
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppConstants.paddingMedium,
@@ -206,23 +199,19 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                         child: Container(
                           height: 48,
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.border),
+                            border: Border.all(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.outlineVariant,
+                            ),
                           ),
                           child: TextField(
                             controller: _searchController,
                             decoration: const InputDecoration(
                               hintText: 'Search appliances...',
-                              hintStyle: TextStyle(
-                                color: AppColors.textSecondary,
-                                fontSize: 14,
-                              ),
-                              prefixIcon: Icon(
-                                Icons.search,
-                                color: AppColors.textSecondary,
-                                size: 20,
-                              ),
+                              prefixIcon: Icon(Icons.search, size: 20),
                               border: InputBorder.none,
                               enabledBorder: InputBorder.none,
                               focusedBorder: InputBorder.none,
@@ -236,21 +225,27 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                       const SizedBox(width: 12),
                       // Filter Button
                       InkWell(
-                        onTap: _showFilterBottomSheet,
+                        onTap: () => _showFilterBottomSheet(_currentAppliances),
                         borderRadius: BorderRadius.circular(12),
                         child: Container(
                           height: 48,
                           width: 48,
                           decoration: BoxDecoration(
-                            color: AppColors.surface,
+                            color: Theme.of(context).colorScheme.surface,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.border),
+                            border: Border.all(
+                              color: _selectedCategory != 'All'
+                                  ? AppColors.primaryBlue
+                                  : Theme.of(
+                                      context,
+                                    ).colorScheme.outlineVariant,
+                            ),
                           ),
                           child: Icon(
                             Icons.tune_rounded,
-                            color: _selectedStatusFilter != 'All'
+                            color: _selectedCategory != 'All'
                                 ? AppColors.primaryBlue
-                                : AppColors.textPrimary,
+                                : Theme.of(context).colorScheme.onSurface,
                             size: 22,
                           ),
                         ),
@@ -259,41 +254,87 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                   ),
                 ),
 
-                // Appliance Cards List
+                // Real Firestore Appliance List
                 Expanded(
-                  child: _filteredAppliances.isEmpty
-                      ? Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.search_off_rounded,
-                                size: 48,
-                                color: AppColors.textSecondary.withAlpha(128),
-                              ),
-                              const SizedBox(height: 12),
-                              const Text(
-                                'No appliances found',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppColors.textSecondary,
+                  child: user == null
+                      ? const Center(child: Text('Please sign in.'))
+                      : StreamBuilder<List<ApplianceModel>>(
+                          stream: context
+                              .read<ApplianceProvider>()
+                              .getUserAppliances(user.uid),
+                          builder: (context, snapshot) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.waiting) {
+                              return const Center(
+                                child: CircularProgressIndicator(),
+                              );
+                            }
+
+                            if (snapshot.hasError) {
+                              return Center(
+                                child: Text('Error: ${snapshot.error}'),
+                              );
+                            }
+
+                            final rawList = snapshot.data ?? [];
+                            _currentAppliances = rawList;
+                            final filteredList = _filterList(rawList);
+
+                            if (filteredList.isEmpty) {
+                              return Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.devices_other_rounded,
+                                      size: 56,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.outline,
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      rawList.isEmpty
+                                          ? 'No appliances added yet'
+                                          : 'No appliances match your search',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 6),
+                                    Text(
+                                      rawList.isEmpty
+                                          ? 'Tap the + button below to add your first appliance.'
+                                          : 'Try adjusting your search query or category filter.',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.onSurfaceVariant,
+                                      ),
+                                    ),
+                                  ],
                                 ),
+                              );
+                            }
+
+                            return ListView.builder(
+                              padding: const EdgeInsets.only(
+                                left: AppConstants.paddingMedium,
+                                right: AppConstants.paddingMedium,
+                                top: 8.0,
+                                bottom: 80.0,
                               ),
-                            ],
-                          ),
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.only(
-                            left: AppConstants.paddingMedium,
-                            right: AppConstants.paddingMedium,
-                            top: 8.0,
-                            bottom: 80.0, // Space for FAB
-                          ),
-                          itemCount: _filteredAppliances.length,
-                          itemBuilder: (context, index) {
-                            final appliance = _filteredAppliances[index];
-                            return _buildApplianceCard(context, appliance);
+                              itemCount: filteredList.length,
+                              itemBuilder: (context, index) {
+                                final appliance = filteredList[index];
+                                return _buildApplianceCard(context, appliance);
+                              },
+                            );
                           },
                         ),
                 ),
@@ -305,9 +346,7 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
               right: 16,
               bottom: 16,
               child: FloatingActionButton(
-                onPressed: () {
-                  context.push('/appliances/add');
-                },
+                onPressed: () => context.push('/appliances/add'),
                 backgroundColor: AppColors.primaryBlue,
                 elevation: 4,
                 shape: const CircleBorder(),
@@ -324,188 +363,108 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
     );
   }
 
-  Widget _buildApplianceCard(BuildContext context, ApplianceItem appliance) {
-    final isActive = appliance.status.toLowerCase() == 'active';
-
+  Widget _buildApplianceCard(BuildContext context, ApplianceModel appliance) {
     return Container(
       margin: const EdgeInsets.only(bottom: 14.0),
       decoration: BoxDecoration(
-        color: AppColors.surface,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x05000000),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-        ],
+        border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
       ),
-      child: Stack(
-        children: [
-          // Background soft gradient accent top right
-          Positioned(
-            top: 0,
-            right: 0,
-            child: CustomPaint(
-              size: const Size(80, 80),
-              painter: _CardCornerPainter(),
-            ),
-          ),
-
-          InkWell(
-            onTap: () {
-              context.push('/appliances/details', extra: appliance);
-            },
-            borderRadius: BorderRadius.circular(16),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Icon container
-                      Container(
-                        height: 50,
-                        width: 50,
-                        decoration: BoxDecoration(
-                          color: appliance.iconBackgroundColor,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(
-                          appliance.icon,
+      child: InkWell(
+        onTap: () {
+          context.push('/appliances/details', extra: appliance);
+        },
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Photo / Category Icon Box
+              Container(
+                height: 56,
+                width: 56,
+                decoration: BoxDecoration(
+                  color: AppColors.blueSurface(context),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child:
+                      appliance.photoUrl != null &&
+                          appliance.photoUrl!.isNotEmpty
+                      ? Image.network(
+                          appliance.photoUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              appliance.categoryIcon,
+                              color: AppColors.primaryBlue,
+                              size: 28,
+                            );
+                          },
+                        )
+                      : Icon(
+                          appliance.categoryIcon,
                           color: AppColors.primaryBlue,
-                          size: 26,
+                          size: 28,
                         ),
-                      ),
-                      const SizedBox(width: 14),
-
-                      // Name & Model
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              appliance.name,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.textPrimary,
-                                letterSpacing: -0.2,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'Model: ${appliance.modelNumber}',
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: AppColors.textSecondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Maintenance & Status Row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            appliance.maintenanceType,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textSecondary,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            appliance.nextMaintenanceDate,
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      // Status Badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isActive
-                              ? const Color(0xFFDCFCE7) // Light green
-                              : const Color(0xFFFEF3C7), // Light yellow/orange
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              isActive
-                                  ? Icons.verified_outlined
-                                  : Icons.warning_amber_rounded,
-                              size: 14,
-                              color: isActive
-                                  ? const Color(0xFF16A34A)
-                                  : const Color(0xFFD97706),
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              appliance.status,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: isActive
-                                    ? const Color(0xFF16A34A)
-                                    : const Color(0xFFD97706),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                ),
               ),
-            ),
+              const SizedBox(width: 14),
+
+              // Info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      appliance.applianceName,
+                      style: const TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      '${appliance.brand} · Model: ${appliance.modelNumber}',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.subtleSurface(context),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        appliance.category.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primaryBlue,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textSecondary,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
-}
-
-/// Subtle decorative corner painter for cards matching screenshot design
-class _CardCornerPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFFF1F5F9).withAlpha(180)
-      ..style = PaintingStyle.fill;
-
-    final path = Path()
-      ..moveTo(size.width, 0)
-      ..lineTo(size.width - 60, 0)
-      ..quadraticBezierTo(size.width, 0, size.width, 60)
-      ..close();
-
-    canvas.drawPath(path, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

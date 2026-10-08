@@ -34,9 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter your email and password.'),
-        ),
+        const SnackBar(content: Text('Please enter your email and password.')),
       );
       return;
     }
@@ -57,8 +55,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            authProvider.errorMessage ??
-                'Login failed. Please try again.',
+            authProvider.errorMessage ?? 'Login failed. Please try again.',
           ),
         ),
       );
@@ -92,7 +89,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final authProvider = context.watch<AuthProvider>();
 
     return Scaffold(
-      backgroundColor: AppColors.surface, // Use white/light background as requested
+      backgroundColor: Theme.of(
+        context,
+      ).colorScheme.surface, // Use white/light background as requested
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(
@@ -104,16 +103,14 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               const SizedBox(height: 24),
               // Logo/Visual Graphic
-              const Center(
-                child: AppLogo(height: 180),
-              ),
+              const Center(child: AppLogo(height: 180)),
               const SizedBox(height: 32),
-              
+
               // Welcome Text
               Text(
                 'Welcome Back!',
                 style: theme.textTheme.headlineMedium?.copyWith(
-                  color: AppColors.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
@@ -122,7 +119,7 @@ class _LoginScreenState extends State<LoginScreen> {
               Text(
                 'Sign in to continue to your home maintenance.',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -147,8 +144,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 textInputAction: TextInputAction.done,
                 suffixIcon: IconButton(
                   icon: Icon(
-                    _isObscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
-                    color: AppColors.textSecondary,
+                    _isObscure
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                   onPressed: () {
                     setState(() {
@@ -179,14 +178,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(4),
                           ),
-                          side: const BorderSide(color: AppColors.border, width: 1.5),
+                          side: BorderSide(
+                            color: Theme.of(context).colorScheme.outlineVariant,
+                            width: 1.5,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 8),
                       Text(
                         'Remember me',
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppColors.textPrimary,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -223,17 +225,27 @@ class _LoginScreenState extends State<LoginScreen> {
               // Divider
               Row(
                 children: [
-                  const Expanded(child: Divider(color: AppColors.border, thickness: 1)),
+                  Expanded(
+                    child: Divider(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                      thickness: 1,
+                    ),
+                  ),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Text(
                       'Or continue with',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
-                  const Expanded(child: Divider(color: AppColors.border, thickness: 1)),
+                  Expanded(
+                    child: Divider(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                      thickness: 1,
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 24),
@@ -243,10 +255,21 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   onPressed: authProvider.isLoading ? null : _signInWithGoogle,
-                  icon: Image.asset('assets/logos/google_logo.png', height: 24, width: 24),
-                  label: const Text('Continue with Google', style: TextStyle(color: AppColors.textPrimary)),
+                  icon: Image.asset(
+                    'assets/logos/google_logo.png',
+                    height: 24,
+                    width: 24,
+                  ),
+                  label: Text(
+                    'Continue with Google',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.border),
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                 ),
@@ -260,7 +283,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text(
                     "Don't have an account? ",
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                   ),
                   TextButton(
