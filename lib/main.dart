@@ -11,10 +11,14 @@ import 'providers/reminder_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/maintenance_provider.dart';
 import 'providers/theme_provider.dart';
+import 'services/device_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await DeviceNotificationService.instance.initialize(
+    onOpenRoute: (route, extra) => AppRouter.router.push(route, extra: extra),
+  );
   final themeProvider = await ThemeProvider.load();
   runApp(
     MultiProvider(

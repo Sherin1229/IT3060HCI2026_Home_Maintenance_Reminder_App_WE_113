@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/notification_model.dart';
 import '../models/notification_settings_model.dart';
 import '../services/notification_service.dart';
+import '../services/device_notification_service.dart';
 
 class NotificationProvider extends ChangeNotifier {
   final NotificationService _service = NotificationService();
@@ -35,10 +36,10 @@ class NotificationProvider extends ChangeNotifier {
   }
 
   Future<bool> saveSettings(String userId, NotificationSettingsModel settings) {
-    return _run(
-      () => _service.saveSettings(userId, settings),
-      'Unable to save notification settings. Please try again.',
-    );
+    return _run(() async {
+      await _service.saveSettings(userId, settings);
+      await DeviceNotificationService.instance.applySettings(userId, settings);
+    }, 'Unable to save notification settings. Please try again.');
   }
 
   Future<bool> _run(Future<void> Function() action, String errorMessage) async {

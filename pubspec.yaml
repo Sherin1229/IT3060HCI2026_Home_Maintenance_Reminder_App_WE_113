@@ -45,6 +45,10 @@ dependencies:
   file_picker: ^13.1.0
   http: ^1.6.0
   url_launcher: ^6.3.2
+  flutter_local_notifications: 22.3.1
+  timezone: 0.11.1
+  flutter_timezone: ^5.1.1
+  firebase_messaging: ^16.5.0
 
 dev_dependencies:
   flutter_test:
@@ -56,6 +60,15 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  image_path_android: assets/logos/homiq_logo.png
+  adaptive_icon_background: "#FFFFFF"
+  adaptive_icon_foreground: assets/logos/homiq_logo.png
+  adaptive_icon_foreground_inset: 20
+  min_sdk_android: 21
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

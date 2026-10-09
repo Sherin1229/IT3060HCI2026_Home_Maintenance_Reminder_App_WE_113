@@ -1,8 +1,10 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+
+import 'device_notification_service.dart';
 
 class WarrantyService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -38,6 +40,15 @@ class WarrantyService {
       'documentName': documentName,
       'createdAt': FieldValue.serverTimestamp(),
     });
+
+    await _runNotificationAction(
+      () => DeviceNotificationService.instance.scheduleWarranty(
+        warrantyId: document.id,
+        userId: userId,
+        expiryDate: warrantyEndDate,
+        applianceName: '${brand.trim()} ${applianceType.trim()}'.trim(),
+      ),
+    );
 
     return document.id;
   }
@@ -124,6 +135,11 @@ class WarrantyService {
     required String provider,
     required String notes,
   }) async {
+    final existing = await _firestore
+        .collection('warranties')
+        .doc(warrantyId)
+        .get();
+    final userId = existing.data()?['userId']?.toString();
     await _firestore.collection('warranties').doc(warrantyId).update({
       'applianceType': applianceType.trim(),
       'applianceId': applianceId?.trim(),
@@ -135,6 +151,19 @@ class WarrantyService {
       'notes': notes.trim(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    await _runNotificationAction(
+      () => DeviceNotificationService.instance.cancelWarranty(warrantyId),
+    );
+    if (userId != null && userId.isNotEmpty) {
+      await _runNotificationAction(
+        () => DeviceNotificationService.instance.scheduleWarranty(
+          warrantyId: warrantyId,
+          userId: userId,
+          expiryDate: warrantyEndDate,
+          applianceName: '${brand.trim()} ${applianceType.trim()}'.trim(),
+        ),
+      );
+    }
   }
 
   Future<void> deleteWarranty({
@@ -157,5 +186,16 @@ class WarrantyService {
     }
 
     await _firestore.collection('warranties').doc(warrantyId).delete();
+    await _runNotificationAction(
+      () => DeviceNotificationService.instance.cancelWarranty(warrantyId),
+    );
+  }
+
+  Future<void> _runNotificationAction(Future<void> Function() action) async {
+    try {
+      await action();
+    } catch (error) {
+      debugPrint('Warranty notification update failed: $error');
+    }
   }
 }
