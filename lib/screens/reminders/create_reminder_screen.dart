@@ -9,6 +9,7 @@ import '../../models/reminder_model.dart';
 import '../../providers/reminder_provider.dart';
 import '../../utils/constants.dart';
 import '../../widgets/primary_button.dart';
+import '../../widgets/appliance_selection_field.dart';
 import 'reminder_schedule_screen.dart';
 import 'widgets/reminder_schedule_card.dart';
 
@@ -20,60 +21,23 @@ class CreateReminderScreen extends StatefulWidget {
 }
 
 class _CreateReminderScreenState extends State<CreateReminderScreen> {
-  static const _categories = [
-    'HVAC',
-    'Refrigerator',
-    'Water Filter',
-    'Washing Machine',
-    'Electrical',
-    'Plumbing',
-    'Other',
-  ];
-
   final _formKey = GlobalKey<FormState>();
   final _titleController = TextEditingController();
+  final _categoryController = TextEditingController();
   final _locationController = TextEditingController();
   final _notesController = TextEditingController();
-  final _dateController = TextEditingController();
-  final _timeController = TextEditingController();
-  String? _selectedCategory;
-  DateTime? _selectedDate;
-  TimeOfDay? _selectedTime;
+  String? _selectedApplianceId;
   ReminderScheduleSelection? _schedule;
+  bool _hasAttemptedSubmit = false;
+  bool _showScheduleError = false;
 
   @override
   void dispose() {
     _titleController.dispose();
+    _categoryController.dispose();
     _locationController.dispose();
     _notesController.dispose();
-    _dateController.dispose();
-    _timeController.dispose();
     super.dispose();
-  }
-
-  Future<void> _pickDate() async {
-    final today = DateUtils.dateOnly(DateTime.now());
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate ?? today,
-      firstDate: today,
-      lastDate: DateTime(today.year + 100, 12, 31),
-    );
-    if (!mounted || date == null) return;
-    _selectedDate = date;
-    _dateController.text = MaterialLocalizations.of(
-      context,
-    ).formatMediumDate(date);
-  }
-
-  Future<void> _pickTime() async {
-    final time = await showTimePicker(
-      context: context,
-      initialTime: _selectedTime ?? TimeOfDay.now(),
-    );
-    if (!mounted || time == null) return;
-    _selectedTime = time;
-    _timeController.text = time.format(context);
   }
 
   Future<void> _openSchedule() async {
@@ -81,12 +45,17 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
       '/reminders/schedule',
       extra: _schedule,
     );
-    if (schedule != null && mounted) setState(() => _schedule = schedule);
+    if (schedule != null && mounted) {
+      setState(() {
+        _schedule = schedule;
+        _showScheduleError = false;
+      });
+    }
   }
 
   String _scheduleSummary(BuildContext context) {
     final schedule = _schedule;
-    if (schedule == null) return 'Set frequency and date';
+    if (schedule == null) return 'Set frequency, date and time';
     final date = MaterialLocalizations.of(
       context,
     ).formatMediumDate(schedule.date);
@@ -96,7 +65,22 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
   Future<void> _saveReminder() async {
     FocusScope.of(context).unfocus();
 
-    if (!_formKey.currentState!.validate()) return;
+    final schedule = _schedule;
+    setState(() {
+      _hasAttemptedSubmit = true;
+      _showScheduleError = schedule == null;
+    });
+
+    final isFormValid = _formKey.currentState?.validate() ?? false;
+    if (schedule == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please set a reminder schedule.')),
+      );
+    }
+
+    if (!isFormValid || schedule == null) {
+      return;
+    }
 
     final user = FirebaseAuth.instance.currentUser;
 
@@ -112,14 +96,17 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
     final reminder = ReminderModel(
       id: '',
       userId: user.uid,
+      applianceId: _selectedApplianceId,
       title: _titleController.text.trim(),
-      category: _selectedCategory!,
+      category: _categoryController.text.trim(),
       location: _locationController.text.trim(),
-      date: _selectedDate!,
-      time: _selectedTime != null ? _timeController.text : null,
+      date: schedule.date,
+      time: schedule.time.format(context),
+      frequency: schedule.frequency,
       notes: _notesController.text.trim().isEmpty
           ? null
           : _notesController.text.trim(),
+      isCompleted: false,
       createdAt: DateTime.now(),
     );
 
@@ -156,7 +143,7 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
           Text(
             label,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppColors.textPrimary,
+              color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -170,7 +157,7 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         centerTitle: true,
         title: const Text('Create Reminder'),
@@ -192,10 +179,23 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
           padding: const EdgeInsets.all(AppConstants.paddingLarge),
           child: Form(
             key: _formKey,
-            autovalidateMode: AutovalidateMode.onUserInteraction,
+            autovalidateMode: _hasAttemptedSubmit
+                ? AutovalidateMode.onUserInteraction
+                : AutovalidateMode.disabled,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                Padding(
+                  padding: const EdgeInsets.only(
+                    bottom: AppConstants.paddingMedium,
+                  ),
+                  child: ApplianceSelectionField(
+                    label: 'Appliance (Optional)',
+                    selectedApplianceId: _selectedApplianceId,
+                    onChanged: (appliance) =>
+                        setState(() => _selectedApplianceId = appliance?.id),
+                  ),
+                ),
                 _field(
                   label: 'Title *',
                   child: TextFormField(
@@ -212,64 +212,26 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                 ),
                 _field(
                   label: 'Category *',
-                  child: DropdownButtonFormField<String>(
-                    initialValue: _selectedCategory,
-                    isExpanded: true,
+                  child: TextFormField(
+                    controller: _categoryController,
+                    textCapitalization: TextCapitalization.words,
+                    textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
-                      hintText: 'Select a category',
+                      hintText: 'E.g. Cleaning, Safety, Payment',
                     ),
-                    icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                    items: _categories
-                        .map(
-                          (category) => DropdownMenuItem(
-                            value: category,
-                            child: Text(category),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (value) {
-                      setState(() {
-                        _selectedCategory = value;
-                      });
-                    },
-                    validator: (value) =>
-                        value == null ? 'Please select a category.' : null,
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? 'Please enter a category.'
+                        : null,
                   ),
                 ),
                 _field(
-                  label: 'Appliance / Location',
+                  label: 'Location',
                   child: TextFormField(
                     controller: _locationController,
                     textCapitalization: TextCapitalization.words,
                     textInputAction: TextInputAction.next,
                     decoration: const InputDecoration(
-                      hintText: 'E.g. Living Room AC',
-                    ),
-                  ),
-                ),
-                _field(
-                  label: 'Date *',
-                  child: TextFormField(
-                    controller: _dateController,
-                    readOnly: true,
-                    onTap: _pickDate,
-                    decoration: const InputDecoration(
-                      hintText: 'Select date',
-                      suffixIcon: Icon(Icons.calendar_today_outlined),
-                    ),
-                    validator: (_) =>
-                        _selectedDate == null ? 'Please select a date.' : null,
-                  ),
-                ),
-                _field(
-                  label: 'Time',
-                  child: TextFormField(
-                    controller: _timeController,
-                    readOnly: true,
-                    onTap: _pickTime,
-                    decoration: const InputDecoration(
-                      hintText: 'Select time (optional)',
-                      suffixIcon: Icon(Icons.access_time_rounded),
+                      hintText: 'E.g. Living Room',
                     ),
                   ),
                 ),
@@ -278,6 +240,15 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                   isConfigured: _schedule != null,
                   onTap: _openSchedule,
                 ),
+                if (_showScheduleError) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Please set a reminder schedule.',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(color: AppColors.error),
+                  ),
+                ],
                 const SizedBox(height: AppConstants.paddingMedium),
                 _field(
                   label: 'Notes',

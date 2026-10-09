@@ -1,8 +1,12 @@
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/auth_service.dart';
+import '../services/device_notification_service.dart';
 import '../services/user_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -15,6 +19,11 @@ class AuthProvider extends ChangeNotifier {
   Map<String, dynamic>? _userProfile;
   bool _isProfileLoading = false;
   String? _profileError;
+  StreamSubscription<Map<String, dynamic>?>? _profileSubscription;
+  bool _isProfileSaving = false;
+  bool _isPhotoUploading = false;
+  bool _isPasswordChanging = false;
+  String? _accountError;
 
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
@@ -23,19 +32,29 @@ class AuthProvider extends ChangeNotifier {
   Map<String, dynamic>? get userProfile => _userProfile;
   bool get isProfileLoading => _isProfileLoading;
   String? get profileError => _profileError;
+  bool get isProfileSaving => _isProfileSaving;
+  bool get isPhotoUploading => _isPhotoUploading;
+  bool get isPasswordChanging => _isPasswordChanging;
+  String? get accountError => _accountError;
 
   String get fullName => _userProfile?['fullName']?.toString() ?? '';
   String get email =>
-      _userProfile?['email']?.toString() ?? currentUser?.email ?? '';
+      currentUser?.email ?? _userProfile?['email']?.toString() ?? '';
   String get phone => _userProfile?['phone']?.toString() ?? '';
+  String get photoUrl => _userProfile?['photoUrl']?.toString() ?? '';
+  bool get supportsPasswordChange => _authService.supportsPasswordChange;
 
-  Future<bool> login({required String email, required String password, required bool rememberMe}) async {
+  Future<bool> login({
+    required String email,
+    required String password,
+    required bool rememberMe,
+  }) async {
     _setLoading(true);
     _errorMessage = null;
 
     try {
       await _authService.signIn(email: email, password: password);
-      
+
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('rememberMe', rememberMe);
 
@@ -167,30 +186,125 @@ class AuthProvider extends ChangeNotifier {
       return;
     }
 
+    await _profileSubscription?.cancel();
     _isProfileLoading = true;
     _profileError = null;
     notifyListeners();
 
-    try {
-      final profile = await _userService.getUserProfile(user.uid);
+    _profileSubscription = _userService
+        .watchUserProfile(user.uid)
+        .listen(
+          (profile) {
+            if (profile == null) {
+              _userProfile = null;
+              _profileError = 'Profile information is not available.';
+            } else {
+              _userProfile = profile;
+              _profileError = null;
+            }
+            _isProfileLoading = false;
+            notifyListeners();
+          },
+          onError: (Object error) {
+            debugPrint('Profile loading error: $error');
+            _userProfile = null;
+            _profileError = 'Unable to load profile information.';
+            _isProfileLoading = false;
+            notifyListeners();
+          },
+        );
+  }
 
-      if (profile == null) {
-        _userProfile = null;
-        _profileError = 'Profile information is not available.';
-      } else {
-        _userProfile = profile;
-      }
-    } catch (e) {
-      debugPrint('Profile loading error: $e');
-      _userProfile = null;
-      _profileError = 'Unable to load profile information.';
+  Future<bool> updateProfile({
+    required String fullName,
+    required String phone,
+  }) async {
+    final user = currentUser;
+    if (user == null) {
+      _accountError = 'You must be signed in to update your profile.';
+      notifyListeners();
+      return false;
+    }
+    _isProfileSaving = true;
+    _accountError = null;
+    notifyListeners();
+    try {
+      await _userService.updateUserProfile(
+        uid: user.uid,
+        fullName: fullName,
+        phone: phone,
+      );
+      return true;
+    } catch (error) {
+      debugPrint('Profile update error: $error');
+      _accountError = 'Unable to update profile. Please try again.';
+      return false;
     } finally {
-      _isProfileLoading = false;
+      _isProfileSaving = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> uploadProfileImage({
+    required Uint8List bytes,
+    required String fileName,
+  }) async {
+    final user = currentUser;
+    if (user == null) {
+      _accountError = 'You must be signed in to change your profile photo.';
+      notifyListeners();
+      return false;
+    }
+    _isPhotoUploading = true;
+    _accountError = null;
+    notifyListeners();
+    try {
+      final url = await _userService.uploadProfileImage(
+        bytes: bytes,
+        fileName: fileName,
+      );
+      await _userService.updateProfilePhoto(uid: user.uid, photoUrl: url);
+      return true;
+    } catch (error) {
+      debugPrint('Profile photo update error: $error');
+      _accountError = 'Unable to update profile photo. Please try again.';
+      return false;
+    } finally {
+      _isPhotoUploading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    _isPasswordChanging = true;
+    _accountError = null;
+    notifyListeners();
+    try {
+      await _authService.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+      return true;
+    } on FirebaseAuthException catch (error) {
+      _accountError = _getPasswordErrorMessage(error);
+      return false;
+    } catch (error) {
+      debugPrint('Password change error: $error');
+      _accountError = 'Unable to change password. Please try again.';
+      return false;
+    } finally {
+      _isPasswordChanging = false;
       notifyListeners();
     }
   }
 
   Future<void> logout() async {
+    await DeviceNotificationService.instance.unregisterCurrentToken();
+    await _profileSubscription?.cancel();
+    _profileSubscription = null;
     await _authService.signOut();
 
     _userProfile = null;
@@ -199,7 +313,6 @@ class AuthProvider extends ChangeNotifier {
 
     notifyListeners();
   }
-  
 
   void clearError() {
     _errorMessage = null;
@@ -231,5 +344,31 @@ class AuthProvider extends ChangeNotifier {
       default:
         return e.message ?? 'Authentication failed. Please try again.';
     }
+  }
+
+  String _getPasswordErrorMessage(FirebaseAuthException error) {
+    switch (error.code) {
+      case 'wrong-password':
+      case 'invalid-credential':
+        return 'The current password is incorrect.';
+      case 'weak-password':
+        return 'The new password must contain at least 6 characters.';
+      case 'requires-recent-login':
+        return 'Please sign in again before changing your password.';
+      case 'network-request-failed':
+        return 'Please check your internet connection.';
+      case 'operation-not-allowed':
+        return 'Password changes are not available for this sign-in method.';
+      case 'user-not-found':
+        return 'You must be signed in to change your password.';
+      default:
+        return 'Unable to change password. Please try again.';
+    }
+  }
+
+  @override
+  void dispose() {
+    _profileSubscription?.cancel();
+    super.dispose();
   }
 }

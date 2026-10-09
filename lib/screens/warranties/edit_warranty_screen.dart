@@ -9,13 +9,14 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../config/app_colors.dart';
 import '../../utils/constants.dart';
 import '../../services/warranty_service.dart';
+import '../../widgets/appliance_selection_field.dart';
 
 enum _EditWarrantyTab { details, documents }
 
 class EditWarrantyScreen extends StatefulWidget {
   final String warrantyId;
 
-  const EditWarrantyScreen({super.key, required this.warrantyId,});
+  const EditWarrantyScreen({super.key, required this.warrantyId});
 
   @override
   State<EditWarrantyScreen> createState() => _EditWarrantyScreenState();
@@ -49,6 +50,7 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
 
   _EditWarrantyTab _selectedTab = _EditWarrantyTab.details;
   String? _applianceType;
+  String? _selectedApplianceId;
   DateTime? _startDate;
   DateTime? _endDate;
   bool _validationAttempted = false;
@@ -78,8 +80,9 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
         return;
       }
 
-      final snapshot =
-          await _warrantyService.getWarrantyOnce(widget.warrantyId);
+      final snapshot = await _warrantyService.getWarrantyOnce(
+        widget.warrantyId,
+      );
 
       if (!mounted) return;
 
@@ -115,31 +118,26 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
       final documentDate = documentTimestamp?.toDate();
 
       setState(() {
+        _selectedApplianceId = data['applianceId']?.toString();
         _applianceType = data['applianceType'] as String?;
-        _brandController.text =
-            (data['brand'] as String?) ?? '';
-        _modelController.text =
-            (data['model'] as String?) ?? '';
-        _providerController.text =
-            (data['provider'] as String?) ?? '';
-        _notesController.text =
-            (data['notes'] as String?) ?? '';
-        _currentDocumentName =
-            (data['documentName'] as String?) ?? '';
+        _brandController.text = (data['brand'] as String?) ?? '';
+        _modelController.text = (data['model'] as String?) ?? '';
+        _providerController.text = (data['provider'] as String?) ?? '';
+        _notesController.text = (data['notes'] as String?) ?? '';
+        _currentDocumentName = (data['documentName'] as String?) ?? '';
 
-        _currentDocumentType =
-            (data['documentType'] as String?) ?? '';
+        _currentDocumentType = (data['documentType'] as String?) ?? '';
 
         _currentDocumentDate = documentDate;
 
         _startDate = startDate;
         _endDate = endDate;
 
-        _startDateController.text =
-            startDate == null ? '' : _formatDate(startDate);
+        _startDateController.text = startDate == null
+            ? ''
+            : _formatDate(startDate);
 
-        _endDateController.text =
-            endDate == null ? '' : _formatDate(endDate);
+        _endDateController.text = endDate == null ? '' : _formatDate(endDate);
 
         _isLoading = false;
         _loadError = null;
@@ -235,9 +233,7 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
       return;
     }
 
-    if (_applianceType == null ||
-        _startDate == null ||
-        _endDate == null) {
+    if (_applianceType == null || _startDate == null || _endDate == null) {
       return;
     }
 
@@ -248,6 +244,7 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
     try {
       await _warrantyService.updateWarranty(
         warrantyId: widget.warrantyId,
+        applianceId: _selectedApplianceId,
         applianceType: _applianceType!,
         brand: _brandController.text,
         model: _modelController.text,
@@ -260,9 +257,7 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Warranty updated successfully.'),
-        ),
+        const SnackBar(content: Text('Warranty updated successfully.')),
       );
 
       context.pop();
@@ -273,9 +268,7 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Unable to update warranty. Please try again.',
-          ),
+          content: Text('Unable to update warranty. Please try again.'),
         ),
       );
     } finally {
@@ -414,38 +407,30 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Edit Warranty'),
-        centerTitle: true,
-      ),
-      body: const Center(
-        child: CircularProgressIndicator(),
-      ),
-    );
-  }
+      return Scaffold(
+        appBar: AppBar(title: const Text('Edit Warranty'), centerTitle: true),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
 
-  if (_loadError != null) {
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: () => context.pop(),
-          icon: const Icon(Icons.arrow_back_rounded),
+    if (_loadError != null) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            onPressed: () => context.pop(),
+            icon: const Icon(Icons.arrow_back_rounded),
+          ),
+          title: const Text('Edit Warranty'),
+          centerTitle: true,
         ),
-        title: const Text('Edit Warranty'),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            _loadError!,
-            textAlign: TextAlign.center,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Text(_loadError!, textAlign: TextAlign.center),
           ),
         ),
-      ),
-    );
-  }
+      );
+    }
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -494,9 +479,13 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
             ),
             Container(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-                border: Border(top: BorderSide(color: AppColors.border)),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                border: Border(
+                  top: BorderSide(
+                    color: Theme.of(context).colorScheme.outlineVariant,
+                  ),
+                ),
               ),
               child: ElevatedButton(
                 onPressed: _isSaving
@@ -508,9 +497,7 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
                     ? const SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                        ),
+                        child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Text('Save Changes'),
               ),
@@ -535,6 +522,22 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: AppConstants.paddingMedium),
+          ApplianceSelectionField(
+            label: 'Linked Appliance (Optional for legacy records)',
+            selectedApplianceId: _selectedApplianceId,
+            onChanged: (appliance) {
+              setState(() {
+                _selectedApplianceId = appliance?.id;
+                if (appliance != null) {
+                  _applianceType = appliance.category;
+                  _brandController.text = appliance.brand;
+                  _modelController.text = appliance.modelNumber;
+                }
+              });
+              _revalidate();
+            },
+          ),
+          const SizedBox(height: AppConstants.paddingMedium),
           _EditField(
             icon: Icons.kitchen_outlined,
             label: 'Appliance Type',
@@ -542,11 +545,18 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
             child: DropdownButtonFormField<String>(
               initialValue: _applianceType,
               isExpanded: true,
-              items: _applianceTypes
-                  .map(
-                    (type) => DropdownMenuItem(value: type, child: Text(type)),
-                  )
-                  .toList(),
+              items:
+                  {
+                        ..._applianceTypes,
+                        if (_applianceType != null &&
+                            _applianceType!.isNotEmpty)
+                          _applianceType!,
+                      }
+                      .map(
+                        (type) =>
+                            DropdownMenuItem(value: type, child: Text(type)),
+                      )
+                      .toList(),
               onChanged: (value) {
                 setState(() => _applianceType = value);
                 _revalidate();
@@ -655,11 +665,11 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
         const SizedBox(height: 12),
         _CurrentDocumentCard(
           documentName: _currentDocumentName,
-            documentType: _currentDocumentType,
-            addedDate: _currentDocumentDate == null
-                ? 'Date unavailable'
-                : _formatDate(_currentDocumentDate!),
-          onReplace: _chooseReplacement
+          documentType: _currentDocumentType,
+          addedDate: _currentDocumentDate == null
+              ? 'Date unavailable'
+              : _formatDate(_currentDocumentDate!),
+          onReplace: _chooseReplacement,
         ),
         const SizedBox(height: AppConstants.paddingLarge),
         _ReplacementArea(
@@ -682,12 +692,12 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
           width: double.infinity,
           padding: const EdgeInsets.all(AppConstants.paddingMedium),
           decoration: BoxDecoration(
-            color: const Color(0xFFEFF6FF),
+            color: AppColors.blueSurface(context),
             borderRadius: BorderRadius.circular(
               AppConstants.borderRadiusMedium,
             ),
           ),
-          child: const Row(
+          child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Icon(Icons.info_rounded, color: AppColors.primaryBlue, size: 22),
@@ -695,7 +705,10 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
               Expanded(
                 child: Text(
                   'Select a new document and tap Save Changes to replace the current warranty document.',
-                  style: TextStyle(color: AppColors.textSecondary, height: 1.4),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    height: 1.4,
+                  ),
                 ),
               ),
             ],
@@ -743,21 +756,14 @@ class _EditSummaryCard extends StatelessWidget {
     final theme = Theme.of(context);
     final now = DateTime.now();
 
-    final normalizedToday = DateTime(
-      now.year,
-      now.month,
-      now.day,
-    );
+    final normalizedToday = DateTime(now.year, now.month, now.day);
 
     final normalizedEndDate = endDate == null
         ? null
-        : DateTime(
-            endDate!.year,
-            endDate!.month,
-            endDate!.day,
-          );
+        : DateTime(endDate!.year, endDate!.month, endDate!.day);
 
-    final isActive = normalizedEndDate != null &&
+    final isActive =
+        normalizedEndDate != null &&
         !normalizedEndDate.isBefore(normalizedToday);
 
     final daysRemaining = normalizedEndDate == null
@@ -775,12 +781,10 @@ class _EditSummaryCard extends StatelessWidget {
           '$daysRemaining day${daysRemaining == 1 ? '' : 's'} remaining';
     } else if (daysRemaining < 365) {
       final months = (daysRemaining / 30).floor();
-      remainingText =
-          '$months month${months == 1 ? '' : 's'} remaining';
+      remainingText = '$months month${months == 1 ? '' : 's'} remaining';
     } else {
       final years = (daysRemaining / 365).floor();
-      remainingText =
-          '$years year${years == 1 ? '' : 's'} remaining';
+      remainingText = '$years year${years == 1 ? '' : 's'} remaining';
     }
 
     return Card(
@@ -793,13 +797,13 @@ class _EditSummaryCard extends StatelessWidget {
               width: 82,
               height: 104,
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: AppColors.neutralSurface(context),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.kitchen_rounded,
                 size: 54,
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(width: 16),
@@ -814,10 +818,7 @@ class _EditSummaryCard extends StatelessWidget {
                       height: 1.25,
                     ),
                   ),
-                  Text(
-                    model,
-                    style: theme.textTheme.bodyMedium,
-                  ),
+                  Text(model, style: theme.textTheme.bodyMedium),
                   const SizedBox(height: 8),
                   Container(
                     padding: const EdgeInsets.symmetric(
@@ -826,8 +827,8 @@ class _EditSummaryCard extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: isActive
-                          ? const Color(0xFFDCFCE7)
-                          : const Color(0xFFFFE4E6),
+                          ? AppColors.successSurface(context)
+                          : AppColors.errorSurface(context),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
@@ -838,9 +839,7 @@ class _EditSummaryCard extends StatelessWidget {
                               ? Icons.check_circle_rounded
                               : Icons.cancel_rounded,
                           size: 15,
-                          color: isActive
-                              ? AppColors.success
-                              : AppColors.error,
+                          color: isActive ? AppColors.success : AppColors.error,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -865,89 +864,6 @@ class _EditSummaryCard extends StatelessWidget {
                   ),
                   Text(
                     remainingText,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppConstants.paddingMedium),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: 82,
-              height: 104,
-              decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Icon(
-                Icons.kitchen_rounded,
-                size: 54,
-                color: AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Samsung Refrigerator',
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      height: 1.25,
-                    ),
-                  ),
-                  Text('RT32K5032S8', style: theme.textTheme.bodyMedium),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 9,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFDCFCE7),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.check_circle_rounded,
-                          size: 15,
-                          color: AppColors.success,
-                        ),
-                        SizedBox(width: 4),
-                        Text(
-                          'Active',
-                          style: TextStyle(
-                            color: AppColors.success,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text('Ends 12 Aug 2028', style: theme.textTheme.bodyMedium),
-                  Text(
-                    '2 years remaining',
                     style: theme.textTheme.bodyMedium?.copyWith(fontSize: 12),
                   ),
                 ],
@@ -958,7 +874,7 @@ class _EditSummaryCard extends StatelessWidget {
       ),
     );
   }
-
+}
 
 class _EditTabs extends StatelessWidget {
   final _EditWarrantyTab selectedTab;
@@ -982,7 +898,7 @@ class _EditTabs extends StatelessWidget {
                     bottom: BorderSide(
                       color: selectedTab == tab
                           ? AppColors.primaryBlue
-                          : AppColors.border,
+                          : Theme.of(context).colorScheme.outlineVariant,
                       width: selectedTab == tab ? 3 : 1,
                     ),
                   ),
@@ -992,7 +908,7 @@ class _EditTabs extends StatelessWidget {
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: selectedTab == tab
                         ? AppColors.primaryBlue
-                        : AppColors.textSecondary,
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
                     fontWeight: selectedTab == tab
                         ? FontWeight.w700
                         : FontWeight.w500,
@@ -1032,7 +948,7 @@ class _EditField extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: const Color(0xFFEFF6FF),
+                color: AppColors.blueSurface(context),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(icon, color: AppColors.primaryBlue, size: 22),
@@ -1047,7 +963,7 @@ class _EditField extends StatelessWidget {
                   TextSpan(
                     text: label,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textSecondary,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
                     children: isRequired
                         ? const [
@@ -1095,16 +1011,12 @@ class _CurrentDocumentCard extends StatelessWidget {
               width: 52,
               height: 60,
               decoration: BoxDecoration(
-                color: const Color(0xFFFFE4E6),
+                color: AppColors.errorSurface(context),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
-                isPdf
-                    ? Icons.picture_as_pdf_outlined
-                    : Icons.image_outlined,
-                color: isPdf
-                    ? AppColors.error
-                    : AppColors.primaryBlue,
+                isPdf ? Icons.picture_as_pdf_outlined : Icons.image_outlined,
+                color: isPdf ? AppColors.error : AppColors.primaryBlue,
                 size: 30,
               ),
             ),
@@ -1118,7 +1030,7 @@ class _CurrentDocumentCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1163,7 +1075,7 @@ class _ReplacementArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFFF8FBFF),
+      color: AppColors.subtleSurface(context),
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: isSelecting ? null : onTap,
@@ -1172,7 +1084,7 @@ class _ReplacementArea extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 26),
           decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFF93C5FD)),
+            border: Border.all(color: AppColors.primaryOutline(context)),
             borderRadius: BorderRadius.circular(16),
           ),
           child: Column(
@@ -1239,7 +1151,7 @@ class _ReplacementFileCard extends StatelessWidget {
               height: 60,
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: AppColors.neutralSurface(context),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: isImage && imageBytes != null
@@ -1260,11 +1172,11 @@ class _ReplacementFileCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  Text('${file.extension?.toUpperCase() ?? 'FILE'} · $size'),
+                  Text('${file.extension?.toUpperCase() ?? 'FILE'} Â· $size'),
                   TextButton(onPressed: onChange, child: const Text('Change')),
                 ],
               ),

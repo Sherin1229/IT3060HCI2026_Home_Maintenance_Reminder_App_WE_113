@@ -3,8 +3,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../config/app_colors.dart';
 import '../../utils/constants.dart';
+import '../../widgets/appliance_selection_field.dart';
 
 class WarrantyDraft {
+  final String? applianceId;
   final String applianceType;
   final String brand;
   final String model;
@@ -14,6 +16,7 @@ class WarrantyDraft {
   final String notes;
 
   const WarrantyDraft({
+    this.applianceId,
     required this.applianceType,
     required this.brand,
     required this.model,
@@ -32,7 +35,6 @@ class AddWarrantyScreen extends StatefulWidget {
 }
 
 class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
-
   final _formKey = GlobalKey<FormState>();
   final _applianceTypeController = TextEditingController();
   final _brandController = TextEditingController();
@@ -45,6 +47,7 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
   DateTime? _startDate;
   DateTime? _endDate;
   bool _hasAttemptedValidation = false;
+  String? _selectedApplianceId;
 
   @override
   void dispose() {
@@ -129,6 +132,7 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
     context.push(
       '/add-warranty/document',
       extra: WarrantyDraft(
+        applianceId: _selectedApplianceId,
         applianceType: _applianceTypeController.text.trim(),
         brand: _brandController.text.trim(),
         model: _modelController.text.trim(),
@@ -143,7 +147,7 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         leading: IconButton(
           onPressed: _goBack,
@@ -167,6 +171,20 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
             children: [
               const _WarrantyStepIndicator(),
               const SizedBox(height: 28),
+              ApplianceSelectionField(
+                label: 'Appliance (Optional)',
+                selectedApplianceId: _selectedApplianceId,
+                onChanged: (appliance) {
+                  setState(() => _selectedApplianceId = appliance?.id);
+                  if (appliance != null) {
+                    _applianceTypeController.text = appliance.category;
+                    _brandController.text = appliance.brand;
+                    _modelController.text = appliance.modelNumber;
+                    _revalidateAfterChange();
+                  }
+                },
+              ),
+              const SizedBox(height: AppConstants.paddingMedium),
               _FormRow(
                 icon: Icons.kitchen_outlined,
                 label: 'Appliance Type',
@@ -256,12 +274,15 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
               _FormRow(
                 icon: Icons.business_outlined,
                 label: 'Provider / Company',
+                isRequired: true,
                 child: TextFormField(
                   controller: _providerController,
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
                     hintText: 'Enter provider / company',
                   ),
+                  validator: (value) =>
+                      _requiredTextValidator(value, 'provider / company'),
                 ),
               ),
               const SizedBox(height: AppConstants.paddingMedium),
@@ -315,7 +336,12 @@ class _WarrantyStepIndicator extends StatelessWidget {
           Row(
             children: [
               const _StepCircle(number: '1', isActive: true),
-              Expanded(child: Container(height: 2, color: AppColors.border)),
+              Expanded(
+                child: Container(
+                  height: 2,
+                  color: Theme.of(context).colorScheme.outlineVariant,
+                ),
+              ),
               const _StepCircle(number: '2', isActive: false),
             ],
           ),
@@ -359,17 +385,23 @@ class _StepCircle extends StatelessWidget {
       height: 34,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: isActive ? AppColors.primaryBlue : AppColors.surface,
+        color: isActive
+            ? AppColors.primaryBlue
+            : Theme.of(context).colorScheme.surface,
         shape: BoxShape.circle,
         border: Border.all(
-          color: isActive ? AppColors.primaryBlue : AppColors.border,
+          color: isActive
+              ? AppColors.primaryBlue
+              : Theme.of(context).colorScheme.outlineVariant,
           width: 2,
         ),
       ),
       child: Text(
         number,
         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          color: isActive ? AppColors.surface : AppColors.textSecondary,
+          color: isActive
+              ? Theme.of(context).colorScheme.onPrimary
+              : Theme.of(context).colorScheme.onSurfaceVariant,
           fontWeight: FontWeight.w700,
         ),
       ),
@@ -405,7 +437,7 @@ class _FormRow extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
+              color: AppColors.blueSurface(context),
               borderRadius: BorderRadius.circular(
                 AppConstants.borderRadiusMedium,
               ),
@@ -422,7 +454,7 @@ class _FormRow extends StatelessWidget {
                 TextSpan(
                   text: label,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w600,
                   ),
                   children: isRequired

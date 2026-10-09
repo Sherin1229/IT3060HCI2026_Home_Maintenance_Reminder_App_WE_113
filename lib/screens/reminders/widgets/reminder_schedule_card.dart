@@ -18,7 +18,7 @@ class ReminderScheduleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: const Color(0xFFEFF6FF),
+      color: AppColors.blueSurface(context),
       borderRadius: BorderRadius.circular(AppConstants.borderRadiusMedium),
       child: InkWell(
         onTap: onTap,
@@ -39,7 +39,7 @@ class ReminderScheduleCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Repeat / Schedule',
+                      'Schedule',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
@@ -55,9 +55,9 @@ class ReminderScheduleCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(
+              Icon(
                 Icons.chevron_right_rounded,
-                color: AppColors.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ],
           ),

@@ -29,25 +29,25 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _hasAcceptedTerms = false;
 
   Future<void> _signUpWithGoogle() async {
-  final authProvider = context.read<AuthProvider>();
+    final authProvider = context.read<AuthProvider>();
 
-  final success = await authProvider.signInWithGoogle();
+    final success = await authProvider.signInWithGoogle();
 
-  if (!mounted) return;
+    if (!mounted) return;
 
-  if (success) {
-    context.go('/dashboard');
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          authProvider.errorMessage ??
-              'Unable to continue with Google. Please try again.',
+    if (success) {
+      context.go('/dashboard');
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            authProvider.errorMessage ??
+                'Unable to continue with Google. Please try again.',
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
-}
 
   @override
   void dispose() {
@@ -109,7 +109,7 @@ class _SignupScreenState extends State<SignupScreen> {
       phone: phone,
       password: password,
     );
-    
+
     if (!mounted) return;
 
     if (success) {
@@ -131,7 +131,7 @@ class _SignupScreenState extends State<SignupScreen> {
     final authProvider = context.watch<AuthProvider>();
 
     return Scaffold(
-      backgroundColor: AppColors.surface,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: SingleChildScrollView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -155,7 +155,7 @@ class _SignupScreenState extends State<SignupScreen> {
               Text(
                 'Create Account',
                 style: theme.textTheme.headlineMedium?.copyWith(
-                  color: AppColors.textPrimary,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
@@ -164,7 +164,7 @@ class _SignupScreenState extends State<SignupScreen> {
               Text(
                 'Create your HomiQ account to manage your home maintenance with ease.',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: AppColors.textSecondary,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -215,7 +215,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     _isPasswordObscure
                         ? Icons.visibility_outlined
                         : Icons.visibility_off_outlined,
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -240,7 +240,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     _isConfirmPasswordObscure
                         ? Icons.visibility_outlined
                         : Icons.visibility_off_outlined,
-                    color: AppColors.textSecondary,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ),
@@ -259,7 +259,10 @@ class _SignupScreenState extends State<SignupScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(4),
                     ),
-                    side: const BorderSide(color: AppColors.border, width: 1.5),
+                    side: BorderSide(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                      width: 1.5,
+                    ),
                   ),
                   Expanded(
                     child: Padding(
@@ -267,7 +270,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       child: Text.rich(
                         TextSpan(
                           style: theme.textTheme.bodyMedium?.copyWith(
-                            color: AppColors.textPrimary,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                           children: const [
                             TextSpan(text: 'I agree to the '),
@@ -302,8 +305,11 @@ class _SignupScreenState extends State<SignupScreen> {
               const SizedBox(height: 32),
               Row(
                 children: [
-                  const Expanded(
-                    child: Divider(color: AppColors.border, thickness: 1),
+                  Expanded(
+                    child: Divider(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                      thickness: 1,
+                    ),
                   ),
                   Padding(
                     padding: const EdgeInsets.symmetric(
@@ -312,26 +318,31 @@ class _SignupScreenState extends State<SignupScreen> {
                     child: Text(
                       'Or continue with',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),
-                  const Expanded(
-                    child: Divider(color: AppColors.border, thickness: 1),
+                  Expanded(
+                    child: Divider(
+                      color: Theme.of(context).colorScheme.outlineVariant,
+                      thickness: 1,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: AppConstants.paddingLarge),
               OutlinedButton.icon(
-                onPressed: authProvider.isLoading ? null : _signUpWithGoogle, 
+                onPressed: authProvider.isLoading ? null : _signUpWithGoogle,
                 icon: Image.asset(
                   'assets/logos/google_logo.png',
                   height: 24,
                   width: 24,
                 ),
-                label: const Text(
+                label: Text(
                   'Continue with Google',
-                  style: TextStyle(color: AppColors.textPrimary),
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
                 ),
               ),
               const SizedBox(height: AppConstants.paddingLarge),
@@ -342,7 +353,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     child: Text(
                       'Already have an account? ',
                       style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppColors.textSecondary,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
                     ),
                   ),

@@ -10,7 +10,6 @@ import '../../config/app_colors.dart';
 import '../../utils/constants.dart';
 import '../../services/warranty_service.dart';
 
-
 class AddWarrantyDocumentScreen extends StatefulWidget {
   final WarrantyDraft draft;
 
@@ -198,6 +197,7 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
       // Create the warranty and keep its Firestore document ID.
       final warrantyId = await _warrantyService.createWarranty(
         userId: user.uid,
+        applianceId: widget.draft.applianceId,
         applianceType: widget.draft.applianceType,
         brand: widget.draft.brand,
         model: widget.draft.model,
@@ -221,9 +221,7 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Warranty saved successfully.'),
-        ),
+        const SnackBar(content: Text('Warranty saved successfully.')),
       );
 
       context.go('/warranties');
@@ -234,9 +232,7 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Unable to save warranty document. Please try again.',
-          ),
+          content: Text('Unable to save warranty document. Please try again.'),
         ),
       );
     } finally {
@@ -251,7 +247,7 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         leading: IconButton(
           onPressed: _goBack,
@@ -419,19 +415,25 @@ class _DocumentStepCircle extends StatelessWidget {
       height: 34,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: isActive ? AppColors.primaryBlue : AppColors.surface,
+        color: isActive
+            ? AppColors.primaryBlue
+            : Theme.of(context).colorScheme.surface,
         shape: BoxShape.circle,
         border: Border.all(
-          color: isActive ? AppColors.primaryBlue : AppColors.border,
+          color: isActive
+              ? AppColors.primaryBlue
+              : Theme.of(context).colorScheme.outlineVariant,
           width: 2,
         ),
       ),
       child: icon != null
-          ? Icon(icon, color: AppColors.surface, size: 19)
+          ? Icon(icon, color: Theme.of(context).colorScheme.onPrimary, size: 19)
           : Text(
               label ?? '',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: isActive ? AppColors.surface : AppColors.textSecondary,
+                color: isActive
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
                 fontWeight: FontWeight.w700,
               ),
             ),
@@ -458,7 +460,7 @@ class _DocumentUploadArea extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Material(
-          color: const Color(0xFFF8FBFF),
+          color: AppColors.subtleSurface(context),
           borderRadius: BorderRadius.circular(AppConstants.borderRadiusLarge),
           child: InkWell(
             onTap: isSelecting ? null : onTap,
@@ -471,7 +473,9 @@ class _DocumentUploadArea extends StatelessWidget {
               ),
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: showError ? AppColors.error : const Color(0xFF93C5FD),
+                  color: showError
+                      ? Theme.of(context).colorScheme.error
+                      : AppColors.primaryOutline(context),
                   width: 1.5,
                 ),
                 borderRadius: BorderRadius.circular(
@@ -483,8 +487,8 @@ class _DocumentUploadArea extends StatelessWidget {
                   Container(
                     width: 64,
                     height: 64,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFDBEAFE),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primaryContainer,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(
@@ -509,12 +513,12 @@ class _DocumentUploadArea extends StatelessWidget {
                     child: ElevatedButton(
                       onPressed: isSelecting ? null : onTap,
                       child: isSelecting
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                color: AppColors.surface,
+                                color: Theme.of(context).colorScheme.onPrimary,
                               ),
                             )
                           : const Text('Choose File'),
@@ -575,7 +579,7 @@ class _SelectedFileCard extends StatelessWidget {
               height: 82,
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: AppColors.neutralSurface(context),
                 borderRadius: BorderRadius.circular(
                   AppConstants.borderRadiusMedium,
                 ),
@@ -598,13 +602,13 @@ class _SelectedFileCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.bodyMedium?.copyWith(
-                      color: AppColors.textPrimary,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    '$fileType · $fileSize',
+                    '$fileType Ã‚Â· $fileSize',
                     style: theme.textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 8),
@@ -662,7 +666,7 @@ class _DocumentFormRow extends StatelessWidget {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
+              color: AppColors.blueSurface(context),
               borderRadius: BorderRadius.circular(
                 AppConstants.borderRadiusMedium,
               ),
@@ -679,7 +683,7 @@ class _DocumentFormRow extends StatelessWidget {
                 TextSpan(
                   text: label,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textPrimary,
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontWeight: FontWeight.w600,
                   ),
                   children: isRequired
