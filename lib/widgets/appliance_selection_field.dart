@@ -10,12 +10,16 @@ class ApplianceSelectionField extends StatelessWidget {
   final String? selectedApplianceId;
   final ValueChanged<ApplianceModel?> onChanged;
   final String label;
+  final bool isRequired;
+  final String? errorText;
 
   const ApplianceSelectionField({
     super.key,
     required this.selectedApplianceId,
     required this.onChanged,
     this.label = 'Appliance (Optional)',
+    this.isRequired = false,
+    this.errorText,
   });
 
   @override
@@ -43,6 +47,7 @@ class ApplianceSelectionField extends StatelessWidget {
             label: label,
             message: 'Unable to load appliances. Please try again.',
             icon: Icons.error_outline_rounded,
+            errorText: errorText,
           );
         }
 
@@ -51,8 +56,11 @@ class ApplianceSelectionField extends StatelessWidget {
             !selectedMissing) {
           return _ApplianceSelectorMessage(
             label: label,
-            message: 'No appliances added yet. You can continue without one.',
+            message: isRequired
+                ? 'Add an appliance before continuing.'
+                : 'No appliances added yet. You can continue without one.',
             icon: Icons.kitchen_outlined,
+            errorText: errorText,
             action: OutlinedButton.icon(
               onPressed: () => context.push('/appliances/add'),
               icon: const Icon(Icons.add_rounded),
@@ -86,21 +94,25 @@ class ApplianceSelectionField extends StatelessWidget {
                 hintText:
                     snapshot.connectionState == ConnectionState.waiting
                         ? 'Loading appliances...'
+                        : isRequired
+                        ? 'Select appliance'
                         : 'No linked appliance',
+                errorText: errorText,
                 prefixIcon: const Icon(
                   Icons.kitchen_outlined,
                 ),
               ),
 
               items: [
-                const DropdownMenuItem<String?>(
-                  value: null,
-                  child: Text(
-                    'No linked appliance',
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 1,
+                if (!isRequired)
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text(
+                      'No linked appliance',
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
                   ),
-                ),
 
                 if (selectedMissing)
                   DropdownMenuItem<String?>(
@@ -179,12 +191,14 @@ class _ApplianceSelectorMessage extends StatelessWidget {
   final String message;
   final IconData icon;
   final Widget? action;
+  final String? errorText;
 
   const _ApplianceSelectorMessage({
     required this.label,
     required this.message,
     required this.icon,
     this.action,
+    this.errorText,
   });
 
   @override
@@ -236,6 +250,18 @@ class _ApplianceSelectorMessage extends StatelessWidget {
             ],
           ),
         ),
+        if (errorText != null) ...[
+          const SizedBox(height: 6),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              errorText!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+            ),
+          ),
+        ],
       ],
     );
   }
