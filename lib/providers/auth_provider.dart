@@ -6,6 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/auth_service.dart';
+import '../services/device_notification_service.dart';
 import '../services/user_service.dart';
 
 class AuthProvider extends ChangeNotifier {
@@ -301,6 +302,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    await DeviceNotificationService.instance.unregisterCurrentToken();
     await _profileSubscription?.cancel();
     _profileSubscription = null;
     await _authService.signOut();
