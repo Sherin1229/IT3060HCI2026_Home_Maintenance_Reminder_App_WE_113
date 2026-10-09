@@ -14,7 +14,7 @@ class WarrantyService {
 
   Future<String> createWarranty({
     required String userId,
-    String? applianceId,
+    required String applianceId,
     required String applianceType,
     required String brand,
     required String model,
@@ -25,10 +25,18 @@ class WarrantyService {
     required String documentType,
     required String documentName,
   }) async {
+    final normalizedApplianceId = applianceId.trim();
+    if (normalizedApplianceId.isEmpty) {
+      throw ArgumentError.value(
+        applianceId,
+        'applianceId',
+        'A warranty must be linked to an appliance.',
+      );
+    }
+
     final document = await _firestore.collection('warranties').add({
       'userId': userId,
-      if (applianceId != null && applianceId.trim().isNotEmpty)
-        'applianceId': applianceId.trim(),
+      'applianceId': normalizedApplianceId,
       'applianceType': applianceType.trim(),
       'brand': brand.trim(),
       'model': model.trim(),
@@ -126,7 +134,7 @@ class WarrantyService {
 
   Future<void> updateWarranty({
     required String warrantyId,
-    String? applianceId,
+    required String applianceId,
     required String applianceType,
     required String brand,
     required String model,
@@ -135,6 +143,15 @@ class WarrantyService {
     required String provider,
     required String notes,
   }) async {
+    final normalizedApplianceId = applianceId.trim();
+    if (normalizedApplianceId.isEmpty) {
+      throw ArgumentError.value(
+        applianceId,
+        'applianceId',
+        'A warranty must be linked to an appliance.',
+      );
+    }
+
     final existing = await _firestore
         .collection('warranties')
         .doc(warrantyId)
@@ -142,7 +159,7 @@ class WarrantyService {
     final userId = existing.data()?['userId']?.toString();
     await _firestore.collection('warranties').doc(warrantyId).update({
       'applianceType': applianceType.trim(),
-      'applianceId': applianceId?.trim(),
+      'applianceId': normalizedApplianceId,
       'brand': brand.trim(),
       'model': model.trim(),
       'warrantyStartDate': Timestamp.fromDate(warrantyStartDate),
