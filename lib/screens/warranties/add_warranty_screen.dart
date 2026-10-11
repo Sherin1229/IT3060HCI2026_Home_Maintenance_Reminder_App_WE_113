@@ -6,7 +6,7 @@ import '../../utils/constants.dart';
 import '../../widgets/appliance_selection_field.dart';
 
 class WarrantyDraft {
-  final String? applianceId;
+  final String applianceId;
   final String applianceType;
   final String brand;
   final String model;
@@ -16,7 +16,7 @@ class WarrantyDraft {
   final String notes;
 
   const WarrantyDraft({
-    this.applianceId,
+    required this.applianceId,
     required this.applianceType,
     required this.brand,
     required this.model,
@@ -48,6 +48,7 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
   DateTime? _endDate;
   bool _hasAttemptedValidation = false;
   String? _selectedApplianceId;
+  String? _applianceError;
 
   @override
   void dispose() {
@@ -125,14 +126,20 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
   void _continueToNextStep() {
     FocusScope.of(context).unfocus();
 
-    _hasAttemptedValidation = true;
+    setState(() {
+      _hasAttemptedValidation = true;
+      _applianceError = _selectedApplianceId == null
+          ? 'Please select an appliance.'
+          : null;
+    });
 
-    if (!(_formKey.currentState?.validate() ?? false)) return;
+    final isFormValid = _formKey.currentState?.validate() ?? false;
+    if (!isFormValid || _applianceError != null) return;
 
     context.push(
       '/add-warranty/document',
       extra: WarrantyDraft(
-        applianceId: _selectedApplianceId,
+        applianceId: _selectedApplianceId!,
         applianceType: _applianceTypeController.text.trim(),
         brand: _brandController.text.trim(),
         model: _modelController.text.trim(),
@@ -172,10 +179,18 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
               const _WarrantyStepIndicator(),
               const SizedBox(height: 28),
               ApplianceSelectionField(
-                label: 'Appliance (Optional)',
+                label: 'Appliance *',
+                isRequired: true,
+                errorText: _applianceError,
                 selectedApplianceId: _selectedApplianceId,
                 onChanged: (appliance) {
-                  setState(() => _selectedApplianceId = appliance?.id);
+                  setState(() {
+                    _selectedApplianceId = appliance?.id;
+                    _applianceError = appliance == null &&
+                            _hasAttemptedValidation
+                        ? 'Please select an appliance.'
+                        : null;
+                  });
                   if (appliance != null) {
                     _applianceTypeController.text = appliance.category;
                     _brandController.text = appliance.brand;
@@ -193,7 +208,8 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
                   controller: _applianceTypeController,
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(
-                    hintText: 'Enter appliance type',
+                    hintText:
+                        'E.g. Air Conditioner, Refrigerator, Washing Machine',
                   ),
                   onChanged: (_) => _revalidateAfterChange(),
                   validator: (value) =>

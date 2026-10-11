@@ -1,12 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
 import '../models/reminder_model.dart';
+import 'device_notification_service.dart';
 
 class ReminderService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   Future<void> createReminder(ReminderModel reminder) async {
-    await _firestore.collection('reminders').add(reminder.toMap());
+    final document = await _firestore
+        .collection('reminders')
+        .add(reminder.toMap());
+    final saved = ReminderModel.fromMap(document.id, reminder.toMap());
+    await _runNotificationAction(
+      () => DeviceNotificationService.instance.scheduleReminder(saved),
+    );
   }
 
   Stream<List<ReminderModel>> getReminders(String userId) {
@@ -49,6 +57,9 @@ class ReminderService {
       'notes': reminder.notes,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    await _runNotificationAction(
+      () => DeviceNotificationService.instance.scheduleReminder(reminder),
+    );
   }
 
   Future<void> markReminderCompleted(String reminderId, String userId) async {
@@ -58,12 +69,18 @@ class ReminderService {
       'isCompleted': true,
       'updatedAt': FieldValue.serverTimestamp(),
     });
+    await _runNotificationAction(
+      () => DeviceNotificationService.instance.cancelReminder(reminderId),
+    );
   }
 
   Future<void> deleteReminder(String reminderId, String userId) async {
     final reference = _firestore.collection('reminders').doc(reminderId);
     await _verifyOwnership(reference, userId);
     await reference.delete();
+    await _runNotificationAction(
+      () => DeviceNotificationService.instance.cancelReminder(reminderId),
+    );
   }
 
   Future<void> _verifyOwnership(
@@ -77,6 +94,14 @@ class ReminderService {
     }
     if (data['userId'] != userId) {
       throw StateError('You do not have permission to modify this reminder.');
+    }
+  }
+
+  Future<void> _runNotificationAction(Future<void> Function() action) async {
+    try {
+      await action();
+    } catch (error) {
+      debugPrint('Reminder notification update failed: $error');
     }
   }
 }

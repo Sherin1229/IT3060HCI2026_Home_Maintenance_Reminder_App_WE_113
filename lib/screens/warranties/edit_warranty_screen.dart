@@ -32,15 +32,8 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
   String _currentDocumentType = '';
   DateTime? _currentDocumentDate;
 
-  static const _applianceTypes = [
-    'Refrigerator',
-    'Washing Machine',
-    'Air Conditioner',
-    'TV',
-    'Other',
-  ];
-
   final _formKey = GlobalKey<FormState>();
+  final _applianceTypeController = TextEditingController();
   final _brandController = TextEditingController();
   final _modelController = TextEditingController();
   final _startDateController = TextEditingController();
@@ -49,8 +42,8 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
   final _notesController = TextEditingController();
 
   _EditWarrantyTab _selectedTab = _EditWarrantyTab.details;
-  String? _applianceType;
   String? _selectedApplianceId;
+  String? _applianceError;
   DateTime? _startDate;
   DateTime? _endDate;
   bool _validationAttempted = false;
@@ -119,7 +112,8 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
 
       setState(() {
         _selectedApplianceId = data['applianceId']?.toString();
-        _applianceType = data['applianceType'] as String?;
+        _applianceTypeController.text =
+            (data['applianceType'] as String?) ?? '';
         _brandController.text = (data['brand'] as String?) ?? '';
         _modelController.text = (data['model'] as String?) ?? '';
         _providerController.text = (data['provider'] as String?) ?? '';
@@ -156,6 +150,7 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
 
   @override
   void dispose() {
+    _applianceTypeController.dispose();
     _brandController.dispose();
     _modelController.dispose();
     _startDateController.dispose();
@@ -227,13 +222,19 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
   Future<void> _saveDetails() async {
     FocusScope.of(context).unfocus();
 
-    setState(() => _validationAttempted = true);
+    setState(() {
+      _validationAttempted = true;
+      _applianceError = _selectedApplianceId == null
+          ? 'Please select an appliance.'
+          : null;
+    });
 
-    if (!(_formKey.currentState?.validate() ?? false)) {
+    final isFormValid = _formKey.currentState?.validate() ?? false;
+    if (!isFormValid || _applianceError != null) {
       return;
     }
 
-    if (_applianceType == null || _startDate == null || _endDate == null) {
+    if (_startDate == null || _endDate == null) {
       return;
     }
 
@@ -244,8 +245,8 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
     try {
       await _warrantyService.updateWarranty(
         warrantyId: widget.warrantyId,
-        applianceId: _selectedApplianceId,
-        applianceType: _applianceType!,
+        applianceId: _selectedApplianceId!,
+        applianceType: _applianceTypeController.text,
         brand: _brandController.text,
         model: _modelController.text,
         warrantyStartDate: _startDate!,
@@ -458,7 +459,7 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
                 child: Column(
                   children: [
                     _EditSummaryCard(
-                      applianceType: _applianceType ?? '',
+                      applianceType: _applianceTypeController.text,
                       brand: _brandController.text,
                       model: _modelController.text,
                       endDate: _endDate,
@@ -523,13 +524,18 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
           ),
           const SizedBox(height: AppConstants.paddingMedium),
           ApplianceSelectionField(
-            label: 'Linked Appliance (Optional for legacy records)',
+            label: 'Appliance *',
+            isRequired: true,
+            errorText: _applianceError,
             selectedApplianceId: _selectedApplianceId,
             onChanged: (appliance) {
               setState(() {
                 _selectedApplianceId = appliance?.id;
+                _applianceError = appliance == null && _validationAttempted
+                    ? 'Please select an appliance.'
+                    : null;
                 if (appliance != null) {
-                  _applianceType = appliance.category;
+                  _applianceTypeController.text = appliance.category;
                   _brandController.text = appliance.brand;
                   _modelController.text = appliance.modelNumber;
                 }
@@ -542,27 +548,18 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
             icon: Icons.kitchen_outlined,
             label: 'Appliance Type',
             isRequired: true,
-            child: DropdownButtonFormField<String>(
-              initialValue: _applianceType,
-              isExpanded: true,
-              items:
-                  {
-                        ..._applianceTypes,
-                        if (_applianceType != null &&
-                            _applianceType!.isNotEmpty)
-                          _applianceType!,
-                      }
-                      .map(
-                        (type) =>
-                            DropdownMenuItem(value: type, child: Text(type)),
-                      )
-                      .toList(),
-              onChanged: (value) {
-                setState(() => _applianceType = value);
+            child: TextFormField(
+              controller: _applianceTypeController,
+              textInputAction: TextInputAction.next,
+              decoration: const InputDecoration(
+                hintText:
+                    'E.g. Air Conditioner, Refrigerator, Washing Machine',
+              ),
+              onChanged: (_) {
+                setState(() {});
                 _revalidate();
               },
-              validator: (value) =>
-                  value == null ? 'Please select an appliance type.' : null,
+              validator: (value) => _requiredText(value, 'appliance type'),
             ),
           ),
           _EditField(
