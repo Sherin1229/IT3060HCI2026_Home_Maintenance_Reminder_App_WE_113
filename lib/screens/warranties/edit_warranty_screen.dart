@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../../config/app_colors.dart';
 import '../../utils/constants.dart';
+import '../../utils/component_validators.dart';
 import '../../services/warranty_service.dart';
 import '../../widgets/appliance_selection_field.dart';
 
@@ -208,11 +209,6 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
     _revalidate();
   }
 
-  String? _requiredText(String? value, String field) {
-    if (value == null || value.trim().isEmpty) return 'Please enter $field.';
-    return null;
-  }
-
   void _showMessage(String message) {
     ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
@@ -246,13 +242,13 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
       await _warrantyService.updateWarranty(
         warrantyId: widget.warrantyId,
         applianceId: _selectedApplianceId!,
-        applianceType: _applianceTypeController.text,
-        brand: _brandController.text,
-        model: _modelController.text,
+        applianceType: _applianceTypeController.text.trim(),
+        brand: _brandController.text.trim(),
+        model: _modelController.text.trim(),
         warrantyStartDate: _startDate!,
         warrantyEndDate: _endDate!,
-        provider: _providerController.text,
-        notes: _notesController.text,
+        provider: _providerController.text.trim(),
+        notes: _notesController.text.trim(),
       );
 
       if (!mounted) return;
@@ -374,7 +370,7 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
 
       final size = file.lengthSync() ?? await file.length();
       if (size != null && size > 10 * 1024 * 1024) {
-        _showMessage('Please select a file smaller than 10 MB.');
+        _showMessage('File size must be 10 MB or less.');
         return;
       }
       final lowerName = file.name.toLowerCase();
@@ -552,14 +548,18 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
               controller: _applianceTypeController,
               textInputAction: TextInputAction.next,
               decoration: const InputDecoration(
-                hintText:
-                    'E.g. Air Conditioner, Refrigerator, Washing Machine',
+                hintText: 'E.g. Air Conditioner, Refrigerator, Washing Machine',
               ),
               onChanged: (_) {
                 setState(() {});
                 _revalidate();
               },
-              validator: (value) => _requiredText(value, 'appliance type'),
+              validator: (value) => ComponentValidators.requiredText(
+                value,
+                field: 'appliance type',
+                minLength: 2,
+                maxLength: 50,
+              ),
             ),
           ),
           _EditField(
@@ -570,7 +570,11 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
               controller: _brandController,
               textInputAction: TextInputAction.next,
               onChanged: (_) => _revalidate(),
-              validator: (value) => _requiredText(value, 'brand'),
+              validator: (value) => ComponentValidators.requiredText(
+                value,
+                field: 'brand',
+                maxLength: 50,
+              ),
             ),
           ),
           _EditField(
@@ -581,7 +585,11 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
               controller: _modelController,
               textInputAction: TextInputAction.next,
               onChanged: (_) => _revalidate(),
-              validator: (value) => _requiredText(value, 'model'),
+              validator: (value) => ComponentValidators.requiredText(
+                value,
+                field: 'model',
+                maxLength: 60,
+              ),
             ),
           ),
           _EditField(
@@ -599,8 +607,8 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
                 if (_startDate == null) {
                   return 'Please select a warranty start date.';
                 }
-                if (_endDate != null && _endDate!.isBefore(_startDate!)) {
-                  return 'Start date cannot be later than end date.';
+                if (_endDate != null && !_endDate!.isAfter(_startDate!)) {
+                  return 'Warranty end date must be after the start date.';
                 }
                 return null;
               },
@@ -617,23 +625,23 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
               decoration: const InputDecoration(
                 suffixIcon: Icon(Icons.calendar_today_outlined),
               ),
-              validator: (_) {
-                if (_endDate == null) {
-                  return 'Please select a warranty end date.';
-                }
-                if (_startDate != null && _endDate!.isBefore(_startDate!)) {
-                  return 'End date cannot be earlier than start date.';
-                }
-                return null;
-              },
+              validator: (_) =>
+                  ComponentValidators.warrantyEndDate(_startDate, _endDate),
             ),
           ),
           _EditField(
             icon: Icons.business_outlined,
             label: 'Provider / Company',
+            isRequired: true,
             child: TextFormField(
               controller: _providerController,
               textInputAction: TextInputAction.next,
+              validator: (value) => ComponentValidators.requiredText(
+                value,
+                field: 'provider / company',
+                minLength: 2,
+                maxLength: 80,
+              ),
             ),
           ),
           _EditField(
@@ -644,6 +652,11 @@ class _EditWarrantyScreenState extends State<EditWarrantyScreen> {
               minLines: 2,
               maxLines: 4,
               textInputAction: TextInputAction.newline,
+              validator: (value) => ComponentValidators.optionalText(
+                value,
+                field: 'Notes',
+                maxLength: 500,
+              ),
             ),
           ),
         ],
