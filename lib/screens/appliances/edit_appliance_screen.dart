@@ -10,6 +10,7 @@ import '../../config/app_colors.dart';
 import '../../models/appliance_model.dart';
 import '../../providers/appliance_provider.dart';
 import '../../utils/constants.dart';
+import '../../utils/component_validators.dart';
 
 class EditApplianceScreen extends StatefulWidget {
   final String? applianceId;
@@ -91,7 +92,7 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
+      firstDate: DateTime(1),
       lastDate: DateTime.now(),
     );
     if (picked != null) {
@@ -265,9 +266,13 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
                             decoration: _buildInputDecoration(
                               'e.g. Kitchen Refrigerator',
                             ),
-                            validator: (v) => v == null || v.trim().isEmpty
-                                ? 'Appliance name is required'
-                                : null,
+                            validator: (value) =>
+                                ComponentValidators.requiredText(
+                                  value,
+                                  field: 'appliance name',
+                                  minLength: 2,
+                                  maxLength: 60,
+                                ),
                           ),
                           const SizedBox(height: 16),
 
@@ -278,9 +283,12 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
                             decoration: _buildInputDecoration(
                               'e.g. Refrigerator',
                             ),
-                            validator: (v) => v == null || v.trim().isEmpty
-                                ? 'Category is required'
-                                : null,
+                            validator: (value) =>
+                                ComponentValidators.requiredText(
+                                  value,
+                                  field: 'category',
+                                  maxLength: 50,
+                                ),
                           ),
                           const SizedBox(height: 16),
 
@@ -298,10 +306,12 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
                                       decoration: _buildInputDecoration(
                                         'e.g. Samsung',
                                       ),
-                                      validator: (v) =>
-                                          v == null || v.trim().isEmpty
-                                          ? 'Brand is required'
-                                          : null,
+                                      validator: (value) =>
+                                          ComponentValidators.requiredText(
+                                            value,
+                                            field: 'brand',
+                                            maxLength: 50,
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -331,10 +341,10 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
                                           ),
                                         ),
                                       ),
-                                      validator: (v) =>
-                                          v == null || v.trim().isEmpty
-                                          ? 'Purchase date is required'
-                                          : null,
+                                      validator: (_) =>
+                                          ComponentValidators.purchaseDate(
+                                            _selectedDate,
+                                          ),
                                     ),
                                   ],
                                 ),
@@ -350,9 +360,12 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
                             decoration: _buildInputDecoration(
                               'e.g. RF28R7351SG',
                             ),
-                            validator: (v) => v == null || v.trim().isEmpty
-                                ? 'Model number is required'
-                                : null,
+                            validator: (value) =>
+                                ComponentValidators.requiredText(
+                                  value,
+                                  field: 'model number',
+                                  maxLength: 60,
+                                ),
                           ),
                           const SizedBox(height: 16),
 
@@ -361,6 +374,12 @@ class _EditApplianceScreenState extends State<EditApplianceScreen> {
                           TextFormField(
                             controller: _serialController,
                             decoration: _buildInputDecoration('Optional'),
+                            validator: (value) =>
+                                ComponentValidators.optionalText(
+                                  value,
+                                  field: 'Serial number',
+                                  maxLength: 80,
+                                ),
                           ),
                         ],
                       ),

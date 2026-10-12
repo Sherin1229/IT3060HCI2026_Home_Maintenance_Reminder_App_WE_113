@@ -8,6 +8,7 @@ import '../../config/app_colors.dart';
 import '../../models/reminder_model.dart';
 import '../../providers/reminder_provider.dart';
 import '../../utils/constants.dart';
+import '../../utils/component_validators.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/appliance_selection_field.dart';
 import 'reminder_schedule_screen.dart';
@@ -37,6 +38,9 @@ class _EditReminderScreenState extends State<EditReminderScreen> {
   ReminderScheduleSelection? _schedule;
   bool _isSaving = false;
   bool _showScheduleError = false;
+  bool _hasAttemptedSubmit = false;
+  bool _scheduleChanged = false;
+  String _scheduleError = 'Please set a reminder schedule.';
 
   @override
   void dispose() {
@@ -105,6 +109,7 @@ class _EditReminderScreenState extends State<EditReminderScreen> {
       _selectedDate = schedule.date;
       _selectedTime = schedule.time;
       _showScheduleError = false;
+      _scheduleChanged = true;
     });
   }
 
@@ -120,13 +125,30 @@ class _EditReminderScreenState extends State<EditReminderScreen> {
 
   Future<void> _updateReminder() async {
     FocusScope.of(context).unfocus();
-    if (_isSaving || !(_formKey.currentState?.validate() ?? false)) return;
+    if (_isSaving) return;
+    setState(() => _hasAttemptedSubmit = true);
+    final isFormValid = _formKey.currentState?.validate() ?? false;
     final schedule = _schedule;
     if (schedule == null) {
-      setState(() => _showScheduleError = true);
+      setState(() {
+        _showScheduleError = true;
+        _scheduleError = 'Please set a reminder schedule.';
+      });
       _showMessage('Please set a reminder schedule.');
       return;
     }
+    final scheduleError = _scheduleChanged
+        ? ComponentValidators.futureReminder(schedule.date, schedule.time)
+        : null;
+    if (scheduleError != null) {
+      setState(() {
+        _showScheduleError = true;
+        _scheduleError = scheduleError;
+      });
+      _showMessage(scheduleError);
+      return;
+    }
+    if (!isFormValid) return;
     final user = FirebaseAuth.instance.currentUser;
     final original = _loadedReminder;
     if (user == null || original == null) {
@@ -238,7 +260,9 @@ class _EditReminderScreenState extends State<EditReminderScreen> {
         padding: const EdgeInsets.all(AppConstants.paddingLarge),
         child: Form(
           key: _formKey,
-          autovalidateMode: AutovalidateMode.onUserInteraction,
+          autovalidateMode: _hasAttemptedSubmit
+              ? AutovalidateMode.onUserInteraction
+              : AutovalidateMode.disabled,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -248,9 +272,12 @@ class _EditReminderScreenState extends State<EditReminderScreen> {
                   controller: _titleController,
                   textCapitalization: TextCapitalization.sentences,
                   textInputAction: TextInputAction.next,
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Please enter a title.'
-                      : null,
+                  validator: (value) => ComponentValidators.requiredText(
+                    value,
+                    field: 'title',
+                    minLength: 2,
+                    maxLength: 80,
+                  ),
                 ),
               ),
               _field(
@@ -262,9 +289,12 @@ class _EditReminderScreenState extends State<EditReminderScreen> {
                   decoration: const InputDecoration(
                     hintText: 'E.g. Cleaning, Safety, Payment',
                   ),
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? 'Please enter a category.'
-                      : null,
+                  validator: (value) => ComponentValidators.requiredText(
+                    value,
+                    field: 'category',
+                    minLength: 2,
+                    maxLength: 50,
+                  ),
                 ),
               ),
               Padding(
@@ -284,6 +314,11 @@ class _EditReminderScreenState extends State<EditReminderScreen> {
                   controller: _locationController,
                   textCapitalization: TextCapitalization.words,
                   textInputAction: TextInputAction.next,
+                  validator: (value) => ComponentValidators.optionalText(
+                    value,
+                    field: 'Location',
+                    maxLength: 80,
+                  ),
                 ),
               ),
               ReminderScheduleCard(
@@ -294,7 +329,7 @@ class _EditReminderScreenState extends State<EditReminderScreen> {
               if (_showScheduleError) ...[
                 const SizedBox(height: 6),
                 Text(
-                  'Please set a reminder schedule.',
+                  _scheduleError,
                   style: Theme.of(
                     context,
                   ).textTheme.bodySmall?.copyWith(color: AppColors.error),
