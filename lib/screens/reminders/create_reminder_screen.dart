@@ -8,6 +8,7 @@ import '../../config/app_colors.dart';
 import '../../models/reminder_model.dart';
 import '../../providers/reminder_provider.dart';
 import '../../utils/constants.dart';
+import '../../utils/component_validators.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/appliance_selection_field.dart';
 import 'reminder_schedule_screen.dart';
@@ -30,6 +31,7 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
   ReminderScheduleSelection? _schedule;
   bool _hasAttemptedSubmit = false;
   bool _showScheduleError = false;
+  String _scheduleError = 'Please set a reminder schedule.';
 
   @override
   void dispose() {
@@ -66,19 +68,23 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
     FocusScope.of(context).unfocus();
 
     final schedule = _schedule;
+    final scheduleError = schedule == null
+        ? 'Please set a reminder schedule.'
+        : ComponentValidators.futureReminder(schedule.date, schedule.time);
     setState(() {
       _hasAttemptedSubmit = true;
-      _showScheduleError = schedule == null;
+      _showScheduleError = scheduleError != null;
+      _scheduleError = scheduleError ?? '';
     });
 
     final isFormValid = _formKey.currentState?.validate() ?? false;
-    if (schedule == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please set a reminder schedule.')),
-      );
+    if (scheduleError != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(scheduleError)));
     }
 
-    if (!isFormValid || schedule == null) {
+    if (!isFormValid || schedule == null || scheduleError != null) {
       return;
     }
 
@@ -205,9 +211,12 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                     decoration: const InputDecoration(
                       hintText: 'E.g. AC Service',
                     ),
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Please enter a title.'
-                        : null,
+                    validator: (value) => ComponentValidators.requiredText(
+                      value,
+                      field: 'title',
+                      minLength: 2,
+                      maxLength: 80,
+                    ),
                   ),
                 ),
                 _field(
@@ -219,9 +228,12 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                     decoration: const InputDecoration(
                       hintText: 'E.g. Cleaning, Safety, Payment',
                     ),
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Please enter a category.'
-                        : null,
+                    validator: (value) => ComponentValidators.requiredText(
+                      value,
+                      field: 'category',
+                      minLength: 2,
+                      maxLength: 50,
+                    ),
                   ),
                 ),
                 _field(
@@ -233,6 +245,11 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                     decoration: const InputDecoration(
                       hintText: 'E.g. Living Room',
                     ),
+                    validator: (value) => ComponentValidators.optionalText(
+                      value,
+                      field: 'Location',
+                      maxLength: 80,
+                    ),
                   ),
                 ),
                 ReminderScheduleCard(
@@ -243,7 +260,7 @@ class _CreateReminderScreenState extends State<CreateReminderScreen> {
                 if (_showScheduleError) ...[
                   const SizedBox(height: 6),
                   Text(
-                    'Please set a reminder schedule.',
+                    _scheduleError,
                     style: Theme.of(
                       context,
                     ).textTheme.bodySmall?.copyWith(color: AppColors.error),

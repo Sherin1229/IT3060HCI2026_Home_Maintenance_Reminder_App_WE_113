@@ -11,6 +11,7 @@ import '../../models/maintenance_model.dart';
 import '../../providers/maintenance_provider.dart';
 import '../../widgets/primary_button.dart';
 import '../../widgets/appliance_selection_field.dart';
+import '../../utils/component_validators.dart';
 
 class MaintenanceFormScreen extends StatefulWidget {
   final MaintenanceFormMode mode;
@@ -278,9 +279,12 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
                 decoration: const InputDecoration(
                   hintText: 'E.g. General Service or Inspection',
                 ),
-                validator: (value) => value == null || value.trim().isEmpty
-                    ? 'Please enter a maintenance type'
-                    : null,
+                validator: (value) => ComponentValidators.requiredText(
+                  value,
+                  field: 'maintenance type',
+                  minLength: 2,
+                  maxLength: 60,
+                ),
               ),
               const SizedBox(height: 16),
             ],
@@ -305,22 +309,35 @@ class _MaintenanceFormScreenState extends State<MaintenanceFormScreen> {
               decoration: const InputDecoration(
                 hintText: 'Add details about the maintenance...',
               ),
+              validator: (value) => ComponentValidators.optionalText(
+                value,
+                field: 'Notes',
+                maxLength: 500,
+              ),
             ),
             const SizedBox(height: 16),
             _FieldLabel(label: 'Cost (Optional)'),
             TextFormField(
               controller: _costController,
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: const InputDecoration(
                 hintText: 'e.g. 5000',
                 prefixText: 'LKR ',
               ),
+              validator: ComponentValidators.cost,
             ),
             const SizedBox(height: 16),
             _FieldLabel(label: 'Service Provider (Optional)'),
             TextFormField(
               controller: _providerController,
               decoration: const InputDecoration(hintText: 'e.g. ABC Service'),
+              validator: (value) => ComponentValidators.optionalText(
+                value,
+                field: 'Service provider',
+                maxLength: 80,
+              ),
             ),
             const SizedBox(height: 16),
             _FieldLabel(label: 'Attach Photos (Optional)'),

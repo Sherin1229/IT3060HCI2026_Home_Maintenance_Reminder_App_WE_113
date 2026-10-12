@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../config/app_colors.dart';
 import '../../utils/constants.dart';
+import '../../utils/component_validators.dart';
 import '../../widgets/appliance_selection_field.dart';
 
 class WarrantyDraft {
@@ -110,13 +111,6 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
     _revalidateAfterChange();
   }
 
-  String? _requiredTextValidator(String? value, String fieldName) {
-    if (value == null || value.trim().isEmpty) {
-      return 'Please enter $fieldName.';
-    }
-    return null;
-  }
-
   void _revalidateAfterChange() {
     if (_hasAttemptedValidation) {
       _formKey.currentState?.validate();
@@ -186,8 +180,8 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
                 onChanged: (appliance) {
                   setState(() {
                     _selectedApplianceId = appliance?.id;
-                    _applianceError = appliance == null &&
-                            _hasAttemptedValidation
+                    _applianceError =
+                        appliance == null && _hasAttemptedValidation
                         ? 'Please select an appliance.'
                         : null;
                   });
@@ -212,8 +206,12 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
                         'E.g. Air Conditioner, Refrigerator, Washing Machine',
                   ),
                   onChanged: (_) => _revalidateAfterChange(),
-                  validator: (value) =>
-                      _requiredTextValidator(value, 'appliance type'),
+                  validator: (value) => ComponentValidators.requiredText(
+                    value,
+                    field: 'appliance type',
+                    minLength: 2,
+                    maxLength: 50,
+                  ),
                 ),
               ),
               const SizedBox(height: AppConstants.paddingMedium),
@@ -226,7 +224,11 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
                   textInputAction: TextInputAction.next,
                   decoration: const InputDecoration(hintText: 'Enter brand'),
                   onChanged: (_) => _revalidateAfterChange(),
-                  validator: (value) => _requiredTextValidator(value, 'brand'),
+                  validator: (value) => ComponentValidators.requiredText(
+                    value,
+                    field: 'brand',
+                    maxLength: 50,
+                  ),
                 ),
               ),
               const SizedBox(height: AppConstants.paddingMedium),
@@ -241,7 +243,11 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
                     hintText: 'Enter model number',
                   ),
                   onChanged: (_) => _revalidateAfterChange(),
-                  validator: (value) => _requiredTextValidator(value, 'model'),
+                  validator: (value) => ComponentValidators.requiredText(
+                    value,
+                    field: 'model',
+                    maxLength: 60,
+                  ),
                 ),
               ),
               const SizedBox(height: AppConstants.paddingMedium),
@@ -275,15 +281,8 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
                     hintText: 'Select date',
                     suffixIcon: Icon(Icons.calendar_today_outlined),
                   ),
-                  validator: (_) {
-                    if (_endDate == null) {
-                      return 'Please select a warranty end date.';
-                    }
-                    if (_startDate != null && _endDate!.isBefore(_startDate!)) {
-                      return 'End date cannot be earlier than start date.';
-                    }
-                    return null;
-                  },
+                  validator: (_) =>
+                      ComponentValidators.warrantyEndDate(_startDate, _endDate),
                 ),
               ),
               const SizedBox(height: AppConstants.paddingMedium),
@@ -297,8 +296,12 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
                   decoration: const InputDecoration(
                     hintText: 'Enter provider / company',
                   ),
-                  validator: (value) =>
-                      _requiredTextValidator(value, 'provider / company'),
+                  validator: (value) => ComponentValidators.requiredText(
+                    value,
+                    field: 'provider / company',
+                    minLength: 2,
+                    maxLength: 80,
+                  ),
                 ),
               ),
               const SizedBox(height: AppConstants.paddingMedium),
@@ -314,6 +317,11 @@ class _AddWarrantyScreenState extends State<AddWarrantyScreen> {
                   decoration: const InputDecoration(
                     hintText: 'Add any additional notes',
                     alignLabelWithHint: true,
+                  ),
+                  validator: (value) => ComponentValidators.optionalText(
+                    value,
+                    field: 'Notes',
+                    maxLength: 500,
                   ),
                 ),
               ),

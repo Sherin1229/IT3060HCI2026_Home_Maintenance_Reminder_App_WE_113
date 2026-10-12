@@ -69,6 +69,7 @@ class _ReminderScheduleScreenState extends State<ReminderScheduleScreen> {
   @override
   Widget build(BuildContext context) {
     final today = DateUtils.dateOnly(DateTime.now());
+    final isCreatingNew = widget.initialSelection == null;
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
@@ -118,7 +119,7 @@ class _ReminderScheduleScreenState extends State<ReminderScheduleScreen> {
                   Card(
                     child: CalendarDatePicker(
                       initialDate: _selectedDate,
-                      firstDate: DateTime(2000),
+                      firstDate: isCreatingNew ? today : DateTime(2000),
                       lastDate: DateTime(today.year + 10, 12, 31),
                       onDateChanged: (date) {
                         setState(() => _selectedDate = date);

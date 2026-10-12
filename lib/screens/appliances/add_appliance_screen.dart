@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import '../../config/app_colors.dart';
 import '../../providers/appliance_provider.dart';
 import '../../utils/constants.dart';
+import '../../utils/component_validators.dart';
 
 class AddApplianceScreen extends StatefulWidget {
   const AddApplianceScreen({super.key});
@@ -62,7 +63,7 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate ?? DateTime.now(),
-      firstDate: DateTime(2000),
+      firstDate: DateTime(1),
       lastDate: DateTime.now(),
     );
     if (picked != null) {
@@ -289,12 +290,12 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
                         decoration: _buildInputDecoration(
                           'e.g. Kitchen Refrigerator',
                         ),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Appliance name is required';
-                          }
-                          return null;
-                        },
+                        validator: (value) => ComponentValidators.requiredText(
+                          value,
+                          field: 'appliance name',
+                          minLength: 2,
+                          maxLength: 60,
+                        ),
                       ),
                       const SizedBox(height: 16),
 
@@ -304,12 +305,11 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
                       TextFormField(
                         controller: _categoryController,
                         decoration: _buildInputDecoration('e.g. Refrigerator'),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Category is required';
-                          }
-                          return null;
-                        },
+                        validator: (value) => ComponentValidators.requiredText(
+                          value,
+                          field: 'category',
+                          maxLength: 50,
+                        ),
                       ),
                       const SizedBox(height: 16),
 
@@ -328,12 +328,12 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
                                   decoration: _buildInputDecoration(
                                     'e.g. Samsung',
                                   ),
-                                  validator: (value) {
-                                    if (value == null || value.trim().isEmpty) {
-                                      return 'Brand is required';
-                                    }
-                                    return null;
-                                  },
+                                  validator: (value) =>
+                                      ComponentValidators.requiredText(
+                                        value,
+                                        field: 'brand',
+                                        maxLength: 50,
+                                      ),
                                 ),
                               ],
                             ),
@@ -360,12 +360,10 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
                                       ),
                                     ),
                                   ),
-                                  validator: (value) {
-                                    if (value == null || value.trim().isEmpty) {
-                                      return 'Purchase date is required';
-                                    }
-                                    return null;
-                                  },
+                                  validator: (_) =>
+                                      ComponentValidators.purchaseDate(
+                                        _selectedDate,
+                                      ),
                                 ),
                               ],
                             ),
@@ -380,12 +378,11 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
                       TextFormField(
                         controller: _modelController,
                         decoration: _buildInputDecoration('e.g. RF28R7351SG'),
-                        validator: (value) {
-                          if (value == null || value.trim().isEmpty) {
-                            return 'Model number is required';
-                          }
-                          return null;
-                        },
+                        validator: (value) => ComponentValidators.requiredText(
+                          value,
+                          field: 'model number',
+                          maxLength: 60,
+                        ),
                       ),
                       const SizedBox(height: 16),
 
@@ -395,6 +392,11 @@ class _AddApplianceScreenState extends State<AddApplianceScreen> {
                       TextFormField(
                         controller: _serialController,
                         decoration: _buildInputDecoration('Optional'),
+                        validator: (value) => ComponentValidators.optionalText(
+                          value,
+                          field: 'Serial number',
+                          maxLength: 80,
+                        ),
                       ),
                     ],
                   ),

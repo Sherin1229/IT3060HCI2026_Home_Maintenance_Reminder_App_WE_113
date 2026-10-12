@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../config/app_colors.dart';
 import '../../utils/constants.dart';
 import '../../services/warranty_service.dart';
+import '../../utils/component_validators.dart';
 
 class AddWarrantyDocumentScreen extends StatefulWidget {
   final WarrantyDraft draft;
@@ -81,6 +82,16 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
           fileName.endsWith('.png');
       final imageBytes = isImage ? await file.readAsBytes() : null;
       final fileSize = file.lengthSync() ?? await file.length();
+
+      if (fileSize != null && fileSize > 10 * 1024 * 1024) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(content: Text('File size must be 10 MB or less.')),
+          );
+        return;
+      }
 
       if (!mounted) return;
 
@@ -302,10 +313,11 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
                     hintText: 'Enter document type',
                   ),
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
-                      return 'Please enter a document type.';
-                    }
-                    return null;
+                    return ComponentValidators.requiredText(
+                      value,
+                      field: 'document type',
+                      maxLength: 50,
+                    );
                   },
                 ),
               ),
@@ -322,6 +334,11 @@ class _AddWarrantyDocumentScreenState extends State<AddWarrantyDocumentScreen> {
                   decoration: const InputDecoration(
                     hintText: 'Add any notes about this document',
                     alignLabelWithHint: true,
+                  ),
+                  validator: (value) => ComponentValidators.optionalText(
+                    value,
+                    field: 'Notes',
+                    maxLength: 500,
                   ),
                 ),
               ),
